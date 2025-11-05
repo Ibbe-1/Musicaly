@@ -33,7 +33,7 @@ namespace Musicaly
                 .UseConverter(item => Markup.Escape(Path.GetFileNameWithoutExtension(item)))
                 .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic))));
             foreach (string s in input) {
-                tracks.Add(new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(s)), Path = s });
+                tracks.Add(new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(s)), Path = s, Duration = new AudioFileReader(s).TotalTime });
             }
 
             // Ensure there are at least 2 songs
@@ -78,8 +78,10 @@ namespace Musicaly
                     bool playPreviousRequested = false;
 
                     // Simulate song progress
-                    int progress = 0;
-                    waveOutEvent.Init(new AudioFileReader(currentTrack.Path));
+                    double progress = 0;
+
+                    AudioFileReader audioFileReader = new AudioFileReader(currentTrack.Path);
+                    waveOutEvent.Init(audioFileReader);
                     waveOutEvent.Play();
 
                     // Update the table until the song ends or user requests an action
@@ -89,7 +91,7 @@ namespace Musicaly
 
                         // Create a simple progress bar for the current song
                         int barLength = 20; // length of the bar
-                        int filledLength = (progress * barLength) / 100;
+                        int filledLength = Convert.ToInt32(progress * barLength / 100);
                         string bar = new string('■', filledLength) + new string('─', barLength - filledLength);
 
                         // Highlight the current song, add loop indicator if active
@@ -97,11 +99,12 @@ namespace Musicaly
                             ? $"[bold green] {currentTrack.Title} [[Looping]][/]" // indicate that the song is being looped.
                             : $"[bold green] {currentTrack.Title}[/]";
 
+                        bool ltHr = audioFileReader.TotalTime.TotalHours < 1;
                         // Highlight the current song and show progress visually
                         table.AddRow(
                             currentDisplay,                      // current song highlighted, with loop indicator
                             $"[dim]{nextTrack.Title}[/]",               // next song dimmed
-                            $"[cyan]{bar} {progress}%[/]"        // progress bar with percentage
+                            $"[cyan]{bar} {(ltHr ? audioFileReader.CurrentTime.ToString(@"mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"mm\:ss") : audioFileReader.CurrentTime.ToString(@"hh\:mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"hh\:mm\:ss"))}[/]"        // progress bar with percentage
                         );
 
                         // Add controls row inside the table for style
@@ -118,7 +121,7 @@ namespace Musicaly
                         await Task.Delay(300);
 
                         // For demonstration, increment by 5%
-                        progress += 5;
+                        progress = audioFileReader.CurrentTime / audioFileReader.TotalTime * 100;
 
                         // Check for user key presses without blocking
                         if (Console.KeyAvailable)
