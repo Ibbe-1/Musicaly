@@ -24,9 +24,6 @@ namespace Musicaly
             table.AddColumn("Progress");
 
             // Ask user to input songs
-            // CHANGE THIS LATER WHEN PUTTING ACTUAL SONGS, WE WANT TO LOAD FROM A PLAYLIST FILE OR SIMILAR
-            Console.WriteLine("Enter your songs (type 'done' when finished):");
-
             // Collect songs from user
             // CHANGE THIS LATER WHEN PUTTING ACTUAL SONGS, WE WANT TO LOAD FROM A PLAYLIST.
             var songs = new List<string>();
