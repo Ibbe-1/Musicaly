@@ -26,17 +26,17 @@ namespace Musicaly
             // Ask user to input songs
             // Collect songs from user
             // CHANGE THIS LATER WHEN PUTTING ACTUAL SONGS, WE WANT TO LOAD FROM A PLAYLIST.
-            var songs = new List<string>();
+            List<Track> tracks = new List<Track>();
             List<string> input = AnsiConsole.Prompt(
                 new MultiSelectionPrompt<string>()
                 .PageSize(10)
-                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Select(f => Markup.Escape(f))));
+                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Select(f => Markup.Escape(Path.GetFileNameWithoutExtension(f)))));
             foreach (string s in input) {
-                songs.Add(s);
+                tracks.Add(new Track() { Title = s });
             }
 
             // Ensure there are at least 2 songs
-            if (songs.Count < 2)
+            if (tracks.Count < 2)
             {
                 Console.WriteLine("You need at least 2 songs to start the player.");
                 return;
@@ -44,8 +44,8 @@ namespace Musicaly
 
             // Initialize current, next, previous
             int songIndex = 0;
-            string currentSong = songs[songIndex];
-            string nextSong = songs[(songIndex + 1) % songs.Count];
+            Track currentTrack = tracks[songIndex];
+            Track nextTrack = tracks[(songIndex + 1) % tracks.Count];
             string previousSong = "";
 
             // Clear console for UI
@@ -90,13 +90,13 @@ namespace Musicaly
 
                         // Highlight the current song, add loop indicator if active
                         string currentDisplay = loopRequested
-                            ? $"[bold green] {currentSong} [[Looping]][/]" // indicate that the song is being looped.
-                            : $"[bold green] {currentSong}[/]";
+                            ? $"[bold green] {currentTrack.Title} [[Looping]][/]" // indicate that the song is being looped.
+                            : $"[bold green] {currentTrack.Title}[/]";
 
                         // Highlight the current song and show progress visually
                         table.AddRow(
                             currentDisplay,                      // current song highlighted, with loop indicator
-                            $"[dim]{nextSong}[/]",               // next song dimmed
+                            $"[dim]{nextTrack.Title}[/]",               // next song dimmed
                             $"[cyan]{bar} {progress}%[/]"        // progress bar with percentage
                         );
 
@@ -144,16 +144,16 @@ namespace Musicaly
                         // Move to previous song in the playlist
                         songIndex--;
                         if (songIndex < 0)
-                            songIndex = songs.Count - 1;
+                            songIndex = tracks.Count - 1;
 
-                        currentSong = songs[songIndex];
-                        nextSong = songs[(songIndex + 1) % songs.Count];
+                        currentTrack = tracks[songIndex];
+                        nextTrack = tracks[(songIndex + 1) % tracks.Count];
                     }
                     else if (skipRequested || !loopRequested) // move to next song if skipped or finished naturally
                     {
-                        songIndex = (songIndex + 1) % songs.Count;
-                        currentSong = songs[songIndex];
-                        nextSong = songs[(songIndex + 1) % songs.Count];
+                        songIndex = (songIndex + 1) % tracks.Count;
+                        currentTrack = tracks[songIndex];
+                        nextTrack = tracks[(songIndex + 1) % tracks.Count];
                     }
 
                     // loopRequested keeps currentSong the same
