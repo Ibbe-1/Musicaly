@@ -30,14 +30,12 @@ namespace Musicaly
             // Collect songs from user
             // CHANGE THIS LATER WHEN PUTTING ACTUAL SONGS, WE WANT TO LOAD FROM A PLAYLIST.
             var songs = new List<string>();
-            while (true)
-            {
-                Console.Write("Song: ");
-                var input = Console.ReadLine();
-                if (string.IsNullOrWhiteSpace(input) || input.ToLower() == "done")
-                    break;
-                songs.Add(input);
-
+            List<string> input = AnsiConsole.Prompt(
+                new MultiSelectionPrompt<string>()
+                .PageSize(10)
+                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Select(f => Markup.Escape(f))));
+            foreach (string s in input) {
+                songs.Add(s);
             }
 
             // Ensure there are at least 2 songs
