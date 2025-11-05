@@ -26,12 +26,12 @@ jobs:
       if: success()
       run: |
         curl -H "Content-Type: application/json" \
-             -X POST ${{ secrets.DISCORD_WEBHOOK }} \
+             -X POST ${{ secrets.DISCORDHOOK }} \
              -d "{\"content\": \"✅ Build passed for PR #${{ github.event.pull_request.number }} by ${{ github.actor }}\"}"
 
     - name: Notify Discord fail
       if: failure()
       run: |
         curl -H "Content-Type: application/json" \
-             -X POST ${{ secrets.DISCORD_WEBHOOK }} \
+             -X POST ${{ secrets.DISCORDHOOK }} \
              -d "{\"content\": \"❌ Build failed for PR #${{ github.event.pull_request.number }} by ${{ github.actor }}\"}"
