@@ -30,9 +30,10 @@ namespace Musicaly
             List<string> input = AnsiConsole.Prompt(
                 new MultiSelectionPrompt<string>()
                 .PageSize(10)
-                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Select(f => Markup.Escape(Path.GetFileNameWithoutExtension(f)))));
+                .UseConverter(item => Markup.Escape(Path.GetFileNameWithoutExtension(item)))
+                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic))));
             foreach (string s in input) {
-                tracks.Add(new Track() { Title = s });
+                tracks.Add(new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(s)), Path = s });
             }
 
             // Ensure there are at least 2 songs
@@ -43,9 +44,9 @@ namespace Musicaly
             }
 
             // Initialize current, next, previous
-            int songIndex = 0;
-            Track currentTrack = tracks[songIndex];
-            Track nextTrack = tracks[(songIndex + 1) % tracks.Count];
+            int trackIndex = 0;
+            Track currentTrack = tracks[trackIndex];
+            Track nextTrack = tracks[(trackIndex + 1) % tracks.Count];
             string previousSong = "";
 
             // Clear console for UI
@@ -59,6 +60,7 @@ namespace Musicaly
 
             // bool to track loop request
             bool loopRequested = false;
+            WaveOutEvent waveOutEvent = new WaveOutEvent();
 
             // Use a single Live display for the table wrapped in a Panel
             await AnsiConsole.Live(new Panel(table)
@@ -77,6 +79,8 @@ namespace Musicaly
 
                     // Simulate song progress
                     int progress = 0;
+                    waveOutEvent.Init(new AudioFileReader(currentTrack.Path));
+                    waveOutEvent.Play();
 
                     // Update the table until the song ends or user requests an action
                     while (progress <= 100)
@@ -142,19 +146,21 @@ namespace Musicaly
                     if (playPreviousRequested)
                     {
                         // Move to previous song in the playlist
-                        songIndex--;
-                        if (songIndex < 0)
-                            songIndex = tracks.Count - 1;
+                        trackIndex--;
+                        if (trackIndex < 0)
+                            trackIndex = tracks.Count - 1;
 
-                        currentTrack = tracks[songIndex];
-                        nextTrack = tracks[(songIndex + 1) % tracks.Count];
+                        currentTrack = tracks[trackIndex];
+                        nextTrack = tracks[(trackIndex + 1) % tracks.Count];
                     }
                     else if (skipRequested || !loopRequested) // move to next song if skipped or finished naturally
                     {
-                        songIndex = (songIndex + 1) % tracks.Count;
-                        currentTrack = tracks[songIndex];
-                        nextTrack = tracks[(songIndex + 1) % tracks.Count];
+                        trackIndex = (trackIndex + 1) % tracks.Count;
+                        currentTrack = tracks[trackIndex];
+                        nextTrack = tracks[(trackIndex + 1) % tracks.Count];
                     }
+
+                    waveOutEvent.Stop();
 
                     // loopRequested keeps currentSong the same
                 }
