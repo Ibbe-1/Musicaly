@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Spectre.Console;
+using NAudio.Wave;
 
 namespace Musicaly
 {
