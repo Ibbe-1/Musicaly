@@ -94,8 +94,8 @@ namespace Musicaly
 
                         // Highlight the current song, add loop indicator if active
                         string currentDisplay = loopRequested
-                            ? $"[bold green]▶ {currentSong} [[Looping]][/]" // indicate that the song is being looped.
-                            : $"[bold green]▶ {currentSong}[/]";
+                            ? $"[bold green] {currentSong} [[Looping]][/]" // indicate that the song is being looped.
+                            : $"[bold green] {currentSong}[/]";
 
                         // Highlight the current song and show progress visually
                         table.AddRow(
