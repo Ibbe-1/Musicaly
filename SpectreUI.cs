@@ -33,6 +33,9 @@ namespace Musicaly
 
         public static async Task SpectreMusicUI()
         {
+            // We need to create instances of ViewMusic so that VivewMusic methods can be used.
+            var viewMusic = new ViewMusic();
+
             // Table to display current song, next up, and progress
             var table = new Table().Centered();
             table.AddColumn("Current Song");
