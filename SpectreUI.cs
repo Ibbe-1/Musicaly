@@ -16,6 +16,9 @@ namespace Musicaly
 
         public async Task SpectreMusicUI()
         {
+            // We need to create instances of ViewMusic so that VivewMusic methods can be used.
+            var viewMusic = new ViewMusic();
+
             // Table to display current song, next up, and progress
             var table = new Table().Centered();
             table.AddColumn("Current Song");
@@ -54,6 +57,10 @@ namespace Musicaly
 
             // Clear console for UI
             Console.Clear();
+
+            viewMusic.ShowAllSongs(songs); // Show all songs, we need this here.
+            // this needs to be fixed currently it shows no songs
+            // also implement a way to popout the viewer so that it doesn't interfere with the player UI
 
             // Display controls
             Console.WriteLine();
