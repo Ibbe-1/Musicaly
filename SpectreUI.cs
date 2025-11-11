@@ -85,7 +85,7 @@ namespace Musicaly
                     waveOutEvent.Play();
 
                     // Update the table until the song ends or user requests an action
-                    while (progress <= 100)
+                    while (Convert.ToInt32(progress) < 100)
                     {
                         table.Rows.Clear();
 
