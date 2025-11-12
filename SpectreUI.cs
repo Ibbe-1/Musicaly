@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Spectre.Console;
+using NAudio.Wave;
 
 namespace Musicaly
 {
@@ -23,33 +24,29 @@ namespace Musicaly
             table.AddColumn("Progress");
 
             // Ask user to input songs
-            // CHANGE THIS LATER WHEN PUTTING ACTUAL SONGS, WE WANT TO LOAD FROM A PLAYLIST FILE OR SIMILAR
-            Console.WriteLine("Enter your songs (type 'done' when finished):");
-
             // Collect songs from user
             // CHANGE THIS LATER WHEN PUTTING ACTUAL SONGS, WE WANT TO LOAD FROM A PLAYLIST.
-            var songs = new List<string>();
-            while (true)
-            {
-                Console.Write("Song: ");
-                var input = Console.ReadLine();
-                if (string.IsNullOrWhiteSpace(input) || input.ToLower() == "done")
-                    break;
-                songs.Add(input);
-
+            List<Track> tracks = new List<Track>();
+            List<string> input = AnsiConsole.Prompt(
+                new MultiSelectionPrompt<string>()
+                .PageSize(10)
+                .UseConverter(item => Markup.Escape(Path.GetFileNameWithoutExtension(item)))
+                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic))));
+            foreach (string s in input) {
+                tracks.Add(new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(s)), Path = s, Duration = new AudioFileReader(s).TotalTime });
             }
 
             // Ensure there are at least 2 songs
-            if (songs.Count < 2)
+            if (tracks.Count < 2)
             {
                 Console.WriteLine("You need at least 2 songs to start the player.");
                 return;
             }
 
             // Initialize current, next, previous
-            int songIndex = 0;
-            string currentSong = songs[songIndex];
-            string nextSong = songs[(songIndex + 1) % songs.Count];
+            int trackIndex = 0;
+            Track currentTrack = tracks[trackIndex];
+            Track nextTrack = tracks[(trackIndex + 1) % tracks.Count];
             string previousSong = "";
 
             // Clear console for UI
@@ -63,6 +60,7 @@ namespace Musicaly
 
             // bool to track loop request
             bool loopRequested = false;
+            WaveOutEvent waveOutEvent = new WaveOutEvent();
 
             // Use a single Live display for the table wrapped in a Panel
             await AnsiConsole.Live(new Panel(table)
@@ -80,28 +78,33 @@ namespace Musicaly
                     bool playPreviousRequested = false;
 
                     // Simulate song progress
-                    int progress = 0;
+                    double progress = 0;
+
+                    AudioFileReader audioFileReader = new AudioFileReader(currentTrack.Path);
+                    waveOutEvent.Init(audioFileReader);
+                    waveOutEvent.Play();
 
                     // Update the table until the song ends or user requests an action
-                    while (progress <= 100)
+                    while (Convert.ToInt32(progress) < 100)
                     {
                         table.Rows.Clear();
 
                         // Create a simple progress bar for the current song
                         int barLength = 20; // length of the bar
-                        int filledLength = (progress * barLength) / 100;
+                        int filledLength = Convert.ToInt32(progress * barLength / 100);
                         string bar = new string('■', filledLength) + new string('─', barLength - filledLength);
 
                         // Highlight the current song, add loop indicator if active
                         string currentDisplay = loopRequested
-                            ? $"[bold green] {currentSong} [[Looping]][/]" // indicate that the song is being looped.
-                            : $"[bold green] {currentSong}[/]";
+                            ? $"[bold green] {currentTrack.Title} [[Looping]][/]" // indicate that the song is being looped.
+                            : $"[bold green] {currentTrack.Title}[/]";
 
+                        bool ltHr = audioFileReader.TotalTime.TotalHours < 1;
                         // Highlight the current song and show progress visually
                         table.AddRow(
                             currentDisplay,                      // current song highlighted, with loop indicator
-                            $"[dim]{nextSong}[/]",               // next song dimmed
-                            $"[cyan]{bar} {progress}%[/]"        // progress bar with percentage
+                            $"[dim]{nextTrack.Title}[/]",               // next song dimmed
+                            $"[cyan]{bar} {(ltHr ? audioFileReader.CurrentTime.ToString(@"mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"mm\:ss") : audioFileReader.CurrentTime.ToString(@"hh\:mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"hh\:mm\:ss"))}[/]"        // progress bar with percentage
                         );
 
                         // Add controls row inside the table for style
@@ -118,7 +121,7 @@ namespace Musicaly
                         await Task.Delay(300);
 
                         // For demonstration, increment by 5%
-                        progress += 5;
+                        progress = audioFileReader.CurrentTime / audioFileReader.TotalTime * 100;
 
                         // Check for user key presses without blocking
                         if (Console.KeyAvailable)
@@ -146,19 +149,21 @@ namespace Musicaly
                     if (playPreviousRequested)
                     {
                         // Move to previous song in the playlist
-                        songIndex--;
-                        if (songIndex < 0)
-                            songIndex = songs.Count - 1;
+                        trackIndex--;
+                        if (trackIndex < 0)
+                            trackIndex = tracks.Count - 1;
 
-                        currentSong = songs[songIndex];
-                        nextSong = songs[(songIndex + 1) % songs.Count];
+                        currentTrack = tracks[trackIndex];
+                        nextTrack = tracks[(trackIndex + 1) % tracks.Count];
                     }
                     else if (skipRequested || !loopRequested) // move to next song if skipped or finished naturally
                     {
-                        songIndex = (songIndex + 1) % songs.Count;
-                        currentSong = songs[songIndex];
-                        nextSong = songs[(songIndex + 1) % songs.Count];
+                        trackIndex = (trackIndex + 1) % tracks.Count;
+                        currentTrack = tracks[trackIndex];
+                        nextTrack = tracks[(trackIndex + 1) % tracks.Count];
                     }
+
+                    waveOutEvent.Stop();
 
                     // loopRequested keeps currentSong the same
                 }
