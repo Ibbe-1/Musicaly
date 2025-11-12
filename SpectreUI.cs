@@ -52,13 +52,15 @@ namespace Musicaly
             string nextSong = songs[(songIndex + 1) % songs.Count];
             string previousSong = "";
 
-            // Clear console for UI
+            //Håller koll om musiken är pausad
+            bool isPaused = false;
+
             Console.Clear();
 
-            // Display controls
+            //lade till pause/resume i kontrollraden 
             Console.WriteLine();
-            Console.WriteLine("Controls:");
-            Console.WriteLine("<- [P] Play Previous || [L] Loop ||  [S] Skip  -> || [E] Exit");
+            Console.WriteLine("Controls: ");
+            Console.WriteLine("[P] Play Previous ||[Space] Pause/Resume || [L] Loop || [S] Skip || [E] Exit ");
             Console.WriteLine();
 
             // bool to track loop request
@@ -97,6 +99,10 @@ namespace Musicaly
                             ? $"[bold green] {currentSong} [[Looping]][/]" // indicate that the song is being looped.
                             : $"[bold green] {currentSong}[/]";
 
+                        //Show clear paused tag in blue 
+                        if (isPaused)
+                            currentDisplay += " [blue][Paused][/]";
+
                         // Highlight the current song and show progress visually
                         table.AddRow(
                             currentDisplay,                      // current song highlighted, with loop indicator
@@ -129,6 +135,7 @@ namespace Musicaly
                             // L - Loop, S - Skip, P - Previous, E - Exit
                             switch (key)
                             {
+                                case ConsoleKey.Spacebar: isPaused = !isPaused; break; // toggle pause/resume
                                 case ConsoleKey.L: loopRequested = !loopRequested; break; // toggle loop
                                 case ConsoleKey.S: skipRequested = true; break;
                                 case ConsoleKey.P: playPreviousRequested = true; break;
@@ -161,6 +168,9 @@ namespace Musicaly
                     }
 
                     // loopRequested keeps currentSong the same
+
+                    //Reset pause when switching to a new songs
+                    isPaused = false;
                 }
             });
         }
