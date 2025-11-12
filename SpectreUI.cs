@@ -57,12 +57,6 @@ namespace Musicaly
 
             Console.Clear();
 
-            //lade till pause/resume i kontrollraden 
-            Console.WriteLine();
-            Console.WriteLine("Controls: ");
-            Console.WriteLine("[P] Play Previous ||[Space] Pause/Resume || [L] Loop || [S] Skip || [E] Exit ");
-            Console.WriteLine();
-
             // bool to track loop request
             bool loopRequested = false;
 
@@ -101,7 +95,7 @@ namespace Musicaly
 
                         //Show clear paused tag in blue 
                         if (isPaused)
-                            currentDisplay += " [blue][Paused][/]";
+                            currentDisplay += " [blue][[Paused]][/]";
 
                         // Highlight the current song and show progress visually
                         table.AddRow(
@@ -113,7 +107,7 @@ namespace Musicaly
                         // Add controls row inside the table for style
                         table.AddEmptyRow();
                         table.AddRow(
-                            "[bold white]<- [[P]] Play Previous || [[L]] Loop || [[S]] Skip -> || [[E]] Exit[/]",
+                            "[bold white]<- [[P]] Play Previous || [[Space]] Pause || [[L]] Loop || [[S]] Skip -> || [[E]] Exit[/]",
                             "",
                             ""
                         );
