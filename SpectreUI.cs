@@ -142,6 +142,8 @@ namespace Musicaly
 
                         if (skipRequested || playPreviousRequested)
                             break; // immediately stop current song
+                        if (isPaused) waveOutEvent.Pause();
+                        else waveOutEvent.Play();
                     }
 
                     if (ExitRequested) break;
