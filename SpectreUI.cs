@@ -139,7 +139,8 @@ namespace Musicaly
                                 case ConsoleKey.S: skipRequested = true; break;
                                 case ConsoleKey.P: playPreviousRequested = true; break;
                                 case ConsoleKey.E: ExitRequested = true; return; // exit player
-                                                                                 // Seek backward 5 seconds
+
+                                // Seek backward 5 seconds
                                 case ConsoleKey.LeftArrow:
                                     audioFileReader.CurrentTime -= TimeSpan.FromSeconds(5);
                                     if (audioFileReader.CurrentTime < TimeSpan.Zero)
