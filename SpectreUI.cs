@@ -49,14 +49,10 @@ namespace Musicaly
             Track nextTrack = tracks[(trackIndex + 1) % tracks.Count];
             string previousSong = "";
 
-            // Clear console for UI
-            Console.Clear();
+            //Håller koll om musiken är pausad
+            bool isPaused = false;
 
-            // Display controls
-            Console.WriteLine();
-            Console.WriteLine("Controls:");
-            Console.WriteLine("<- [P] Play Previous || [L] Loop ||  [S] Skip  -> || [E] Exit");
-            Console.WriteLine();
+            Console.Clear();
 
             // bool to track loop request
             bool loopRequested = false;
@@ -99,6 +95,10 @@ namespace Musicaly
                             ? $"[bold green] {currentTrack.Title} [[Looping]][/]" // indicate that the song is being looped.
                             : $"[bold green] {currentTrack.Title}[/]";
 
+                        //Show clear paused tag in blue 
+                        if (isPaused)
+                            currentDisplay += " [blue][[Paused]][/]";
+
                         bool ltHr = audioFileReader.TotalTime.TotalHours < 1;
                         // Highlight the current song and show progress visually
                         table.AddRow(
@@ -110,7 +110,7 @@ namespace Musicaly
                         // Add controls row inside the table for style
                         table.AddEmptyRow();
                         table.AddRow(
-                            "[bold white]<- [[P]] Play Previous || [[L]] Loop || [[S]] Skip -> || [[E]] Exit[/]",
+                            "[bold white]<- [[P]] Play Previous || [[Space]] Pause || [[L]] Loop || [[S]] Skip -> || [[E]] Exit[/]",
                             "",
                             ""
                         );
@@ -132,6 +132,7 @@ namespace Musicaly
                             // L - Loop, S - Skip, P - Previous, E - Exit
                             switch (key)
                             {
+                                case ConsoleKey.Spacebar: isPaused = !isPaused; break; // toggle pause/resume
                                 case ConsoleKey.L: loopRequested = !loopRequested; break; // toggle loop
                                 case ConsoleKey.S: skipRequested = true; break;
                                 case ConsoleKey.P: playPreviousRequested = true; break;
@@ -141,6 +142,8 @@ namespace Musicaly
 
                         if (skipRequested || playPreviousRequested)
                             break; // immediately stop current song
+                        if (isPaused) waveOutEvent.Pause();
+                        else waveOutEvent.Play();
                     }
 
                     if (ExitRequested) break;
@@ -166,6 +169,9 @@ namespace Musicaly
                     waveOutEvent.Stop();
 
                     // loopRequested keeps currentSong the same
+
+                    //Reset pause when switching to a new songs
+                    isPaused = false;
                 }
             });
         }
