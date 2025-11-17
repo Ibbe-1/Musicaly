@@ -20,15 +20,20 @@ namespace Musicaly {
                 File.Create(usersPath).Close();
             }
         }
-        public void LogIn() {
-            while (!users.Exists(u => u.UserName.Equals(SpectreUI.Username()))) {
-                Console.WriteLine("Username does not exist.");
-                Console.Clear();
+        public bool LogIn() {
+            string userName = SpectreUI.Username();
+            while (!users.Exists(u => u.UserName.Equals(userName))) {
+                if (userName != "") Console.WriteLine("Username does not exist.");
+                else return false;
+                userName = SpectreUI.Username();
             }
-            while (!users.Exists(u => u.Password.Equals(SpectreUI.Password()))) {
-                Console.WriteLine("Password does not exist.");
-                Console.Clear();
+            string password = SpectreUI.Password();
+            while (!users.Exists(u => u.Password.Equals(password))) {
+                if (password != "") Console.WriteLine("Incorrect password.");
+                else return false;
+                password = SpectreUI.Password();
             }
+            return true;
         }
         public void Register() {
             users.Add(new User() { UserName = SpectreUI.Username(), Password = SpectreUI.Password() });

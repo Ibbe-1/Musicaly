@@ -162,7 +162,10 @@ namespace Musicaly
                         else waveOutEvent.Play();
                     }
 
-                    if (ExitRequested) break;
+                    if (ExitRequested) {
+                        waveOutEvent.Stop();
+                        break;
+                    }
 
                     // Handle user requests after stopping or finishing the song
                     if (playPreviousRequested)

@@ -14,9 +14,10 @@ namespace Musicaly
                 Console.Clear();
                 switch (SpectreUI.ShowWelcomeMessage()) {
                     case "Log In":
-                        userManager.LogIn();
-                        Console.Clear();
-                        await SpectreUI.SpectreMusicUI();
+                        if (userManager.LogIn()) {
+                            Console.Clear();
+                            await SpectreUI.SpectreMusicUI();
+                        }
                         break;
                     case "Register":
                         userManager.Register();
