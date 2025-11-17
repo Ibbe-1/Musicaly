@@ -27,11 +27,11 @@ namespace Musicaly {
                 else return false;
                 userName = SpectreUI.Username();
             }
-            string password = SpectreUI.Password();
-            while (!users.Exists(u => u.Password.Equals(BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(password))).Replace("-", "")))) {
+            string password = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(SpectreUI.Password()))).Replace("-", "");
+            while (!users.Exists(u => u.Password.Equals(password))) {
                 if (password != "") Console.WriteLine("Incorrect password.");
                 else return false;
-                password = SpectreUI.Password();
+                password = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(SpectreUI.Password()))).Replace("-", "");
             }
             return true;
         }
