@@ -36,7 +36,43 @@ namespace Musicaly {
             return true;
         }
         public void Register() {
-            users.Add(new User() { UserName = SpectreUI.Username(), Password = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(SpectreUI.Password()))).Replace("-", "") });
+            string userName = SpectreUI.Username();
+            while (users.Exists(u => u.UserName.Equals(userName))) {
+                if (userName != "") Console.WriteLine("Username already exists.");
+                else return;
+                userName = SpectreUI.Username();
+            }
+            string password;
+            while (true) {
+                password = SpectreUI.Password();
+                if (password == "") return;
+                if (password.Length < 8) {
+                    Console.WriteLine("Password must be at least 8 characters long.");
+                    continue;
+                }
+
+                if (!password.Any(char.IsUpper)) {
+                    Console.WriteLine("Password must contain at least one uppercase letter.");
+                    continue;
+                }
+
+                if (!password.Any(char.IsLower)) {
+                    Console.WriteLine("Password must contain at least one lowercase letter.");
+                    continue;
+                }
+
+                if (!password.Any(char.IsDigit)) {
+                    Console.WriteLine("Password must contain at least one number.");
+                    continue;
+                }
+
+                if (!password.Any(ch => "!@#$%^&*()-_=+[]{};:,.<>?".Contains(ch))) {
+                    Console.WriteLine("Password must contain at least one special character.");
+                    continue;
+                }
+                break;
+            }
+            users.Add(new User() { UserName = userName, Password = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(password))).Replace("-", "") });
             File.WriteAllText(usersPath, JsonSerializer.Serialize(users));
         }
     }
