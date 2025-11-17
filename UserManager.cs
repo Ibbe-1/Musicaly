@@ -28,7 +28,7 @@ namespace Musicaly {
                 userName = SpectreUI.Username();
             }
             string password = SpectreUI.Password();
-            while (!users.Exists(u => u.Password.Equals(password))) {
+            while (!users.Exists(u => u.Password.Equals(BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(password))).Replace("-", "")))) {
                 if (password != "") Console.WriteLine("Incorrect password.");
                 else return false;
                 password = SpectreUI.Password();
@@ -36,7 +36,7 @@ namespace Musicaly {
             return true;
         }
         public void Register() {
-            users.Add(new User() { UserName = SpectreUI.Username(), Password = SpectreUI.Password() });
+            users.Add(new User() { UserName = SpectreUI.Username(), Password = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(SpectreUI.Password()))).Replace("-", "") });
             File.WriteAllText(usersPath, JsonSerializer.Serialize(users));
         }
     }
