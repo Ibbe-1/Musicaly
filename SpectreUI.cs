@@ -10,9 +10,25 @@ namespace Musicaly
     {
         // Property to track if exit is requested
         public bool ExitRequested { get; private set; } = false;
-        public void ShowWelcomeMessage()
-        {
+        public string ShowWelcomeMessage() {
             AnsiConsole.MarkupLine("[bold green]Welcome to Musicaly![/]");
+            return AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .PageSize(3)
+                    .AddChoices(["Log In", "Register", "Exit"]));
+        }
+
+        public string Username() {
+            return AnsiConsole.Prompt(
+                new TextPrompt<string>("Enter username. Leave empty to exit.")
+                    .AllowEmpty());
+        }
+
+        public string Password() {
+            return AnsiConsole.Prompt(
+                new TextPrompt<string>("Enter password. Leave empty to exit.")
+                    .AllowEmpty()
+                    .Secret());
         }
 
         public async Task SpectreMusicUI()
@@ -31,7 +47,7 @@ namespace Musicaly
                 new MultiSelectionPrompt<string>()
                 .PageSize(10)
                 .UseConverter(item => Markup.Escape(Path.GetFileNameWithoutExtension(item)))
-                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic))));
+                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Where(f => f != "C:\\Users\\Hugo\\Music\\desktop.ini")));
             foreach (string s in input) {
                 tracks.Add(new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(s)), Path = s, Duration = new AudioFileReader(s).TotalTime });
             }
