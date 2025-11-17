@@ -6,13 +6,25 @@ namespace Musicaly
     {
         static async Task Main(string[] args)
         {
-            // Initialize SpectreUI
-            var ui = new SpectreUI();
-            ui.ShowWelcomeMessage();
+            UserManager userManager = new UserManager();
+            bool exitRequested = false;
             // Main loop keeps running until exit is prompted.
-            while (!ui.ExitRequested)
+            while (!exitRequested)
             {
-                await ui.SpectreMusicUI();
+                Console.Clear();
+                switch (SpectreUI.ShowWelcomeMessage()) {
+                    case "Log In":
+                        userManager.LogIn();
+                        Console.Clear();
+                        await SpectreUI.SpectreMusicUI();
+                        break;
+                    case "Register":
+                        userManager.Register();
+                        break;
+                    case "Exit":
+                        exitRequested = true;
+                        break;
+                }
             }
             // Exit message
             AnsiConsole.MarkupLine("[bold green]A work in progress!, thanks for using Musicaly![/]");

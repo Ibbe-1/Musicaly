@@ -6,11 +6,11 @@ using NAudio.Wave;
 
 namespace Musicaly
 {
-    internal class SpectreUI
+    internal static class SpectreUI
     {
         // Property to track if exit is requested
-        public bool ExitRequested { get; private set; } = false;
-        public string ShowWelcomeMessage() {
+        public static bool ExitRequested { get; private set; } = false;
+        public static string ShowWelcomeMessage() {
             AnsiConsole.MarkupLine("[bold green]Welcome to Musicaly![/]");
             return AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
@@ -18,20 +18,20 @@ namespace Musicaly
                     .AddChoices(["Log In", "Register", "Exit"]));
         }
 
-        public string Username() {
+        public static string Username() {
             return AnsiConsole.Prompt(
                 new TextPrompt<string>("Enter username. Leave empty to exit.")
                     .AllowEmpty());
         }
 
-        public string Password() {
+        public static string Password() {
             return AnsiConsole.Prompt(
                 new TextPrompt<string>("Enter password. Leave empty to exit.")
                     .AllowEmpty()
                     .Secret());
         }
 
-        public async Task SpectreMusicUI()
+        public static async Task SpectreMusicUI()
         {
             // Table to display current song, next up, and progress
             var table = new Table().Centered();
