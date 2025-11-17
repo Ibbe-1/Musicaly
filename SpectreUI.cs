@@ -55,7 +55,7 @@ namespace Musicaly
             //Håller koll om musiken är pausad
             bool isPaused = false;
 
-            viewMusic.ShowAllSongs(songs); // Show all songs, we need this here.
+            viewMusic.ShowAllSongs(tracks.Select(t => t.Title).ToList()); // Show all songs, we need this here.
             // this needs to be fixed currently it shows no songs
             // also implement a way to popout the viewer so that it doesn't interfere with the player UI
 
