@@ -35,7 +35,8 @@ namespace Musicaly
                 .PageSize(10)
                 .UseConverter(item => Markup.Escape(Path.GetFileNameWithoutExtension(item)))
                 .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic))));
-            foreach (string s in input) {
+            foreach (string s in input)
+            {
                 tracks.Add(new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(s)), Path = s, Duration = new AudioFileReader(s).TotalTime });
             }
 
@@ -95,39 +96,76 @@ namespace Musicaly
                     // Update the table until the song ends or user requests an action
                     while (Convert.ToInt32(progress) < 100)
                     {
-                        table.Rows.Clear();
+                        // --- GRID LAYOUT FOR PLAYER ---
+                        var grid = new Grid();
+                        grid.AddColumn();
+                        grid.AddColumn();
 
-                        // Create a simple progress bar for the current song
-                        int barLength = 20; // length of the bar
-                        int filledLength = Convert.ToInt32(progress * barLength / 100);
-                        string bar = new string('■', filledLength) + new string('─', barLength - filledLength);
+                        // Now Playing Panel
+                        var nowPlayingPanel = new Panel($"[bold green]{currentTrack.Title}[/]")
+                        {
+                            Header = new PanelHeader("Now Playing"),
+                            Border = BoxBorder.Rounded
+                        };
 
-                        // Highlight the current song, add loop indicator if active
-                        string currentDisplay = loopRequested
-                            ? $"[bold green] {currentTrack.Title} [[Looping]][/]" // indicate that the song is being looped.
-                            : $"[bold green] {currentTrack.Title}[/]";
+                        // Next Up Panel
+                        var nextUpPanel = new Panel($"[yellow]{nextTrack.Title}[/]")
+                        {
+                            Header = new PanelHeader("Next Up"),
+                            Border = BoxBorder.Rounded
+                        };
 
-                        //Show clear paused tag in blue 
-                        if (isPaused)
-                            currentDisplay += " [blue][[Paused]][/]";
+                        grid.AddRow(nowPlayingPanel, nextUpPanel);
 
+                        // Progress Bar
+                        int barLength = 30;
+                        int filled = Convert.ToInt32(progress * barLength / 100);
+                        string bar = new string('■', filled) + new string('─', barLength - filled);
                         bool ltHr = audioFileReader.TotalTime.TotalHours < 1;
-                        // Highlight the current song and show progress visually
-                        table.AddRow(
-                            currentDisplay,                      // current song highlighted, with loop indicator
-                            $"[dim]{nextTrack.Title}[/]",               // next song dimmed
-                            $"[cyan]{bar} {(ltHr ? audioFileReader.CurrentTime.ToString(@"mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"mm\:ss") : audioFileReader.CurrentTime.ToString(@"hh\:mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"hh\:mm\:ss"))}[/]"        // progress bar with percentage
-                        );
+                        string timeString = ltHr
+                            ? $"{audioFileReader.CurrentTime:mm\\:ss}/{audioFileReader.TotalTime:mm\\:ss}"
+                            : $"{audioFileReader.CurrentTime:hh\\:mm\\:ss}/{audioFileReader.TotalTime:hh\\:mm\\:ss}";
 
-                        // Add controls row inside the table for style
-                        table.AddEmptyRow();
-                        table.AddRow(
-                            "[bold white]<- [[P]] Play Previous || [[Space]] Pause || [[L]] Loop || [[S]] Skip -> || [[E]] Exit[/]",
-                            "",
-                            ""
-                        );
+                        var progressPanel = new Panel($"[cyan]{bar}[/] {timeString}")
+                        {
+                            Header = new PanelHeader("Progress"),
+                            Border = BoxBorder.Rounded
+                        };
 
-                        ctx.Refresh();
+                        // Playlist Panel
+                        string playlist =
+                            string.Join("\n", tracks.Select((t, i) =>
+                                i == trackIndex ? $"[green]> {t.Title}[/]" : $"  {t.Title}"
+                            ));
+
+                        var playlistPanel = new Panel(playlist)
+                        {
+                            Header = new PanelHeader("Playlist"),
+                            Border = BoxBorder.Rounded
+                        };
+
+                        grid.AddRow(progressPanel, playlistPanel);
+
+                        // Controls Panel
+                        var controlsPanel = new Panel(
+                         "[white] [[P]] Prev | [[Space]] Pause | [[L]] Loop | [[S]] Skip | [[E]] Exit [/]"
+                         )
+                        {
+                            Border = BoxBorder.None
+                        };
+
+                        grid.AddRow(controlsPanel);
+
+                        // Combine everything into the main player panel with decorative title
+                        var playerPanel = new Panel(grid)
+                        {
+                            Header = new PanelHeader("[bold yellow] MUSICALY [/]"), // Decorative top title
+                            Border = BoxBorder.Double,
+                            Padding = new Padding(1, 1, 1, 1)
+                        };
+
+                        // Update live display
+                        ctx.UpdateTarget(playerPanel);
 
                         // Simulate time passing for song progress
                         await Task.Delay(300);
