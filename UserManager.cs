@@ -20,6 +20,10 @@ namespace Musicaly {
                 File.Create(usersPath).Close();
             }
         }
+
+        public string Hash(string p) {
+            return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(p))).Replace("-", "");
+        }
         public bool LogIn() {
             string userName = SpectreUI.Username();
             while (!users.Exists(u => u.UserName.Equals(userName))) {
@@ -27,17 +31,17 @@ namespace Musicaly {
                 else return false;
                 userName = SpectreUI.Username();
             }
-            string password = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(SpectreUI.Password()))).Replace("-", "");
+            string password = Hash(SpectreUI.Password());
             while (!users.Exists(u => u.Password.Equals(password))) {
-                if (password != "") Console.WriteLine("Incorrect password.");
+                if (password != Hash("")) Console.WriteLine("Incorrect password.");
                 else return false;
-                password = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(SpectreUI.Password()))).Replace("-", "");
+                password = Hash(SpectreUI.Password());
             }
             return true;
         }
         public void Register() {
             string userName = SpectreUI.Username();
-            while (users.Exists(u => u.UserName.Equals(userName))) {
+            while (users.Exists(u => u.UserName.Equals(userName)) || userName == "") {
                 if (userName != "") Console.WriteLine("Username already exists.");
                 else return;
                 userName = SpectreUI.Username();
@@ -72,7 +76,7 @@ namespace Musicaly {
                 }
                 break;
             }
-            users.Add(new User() { UserName = userName, Password = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(password))).Replace("-", "") });
+            users.Add(new User() { UserName = userName, Password = Hash(password)});
             File.WriteAllText(usersPath, JsonSerializer.Serialize(users));
         }
     }
