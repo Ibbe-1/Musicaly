@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Spectre.Console;
 using NAudio.Wave;
+using System.Data;
 
 namespace Musicaly
 {
@@ -101,8 +102,17 @@ namespace Musicaly
                         grid.AddColumn();
                         grid.AddColumn();
 
+                        // Build Now Playing text with indicators
+                        string nowPlayingText = $"[bold green]{currentTrack.Title}[/]";
+
+                        if (loopRequested)
+                            nowPlayingText += " [yellow][[Looping]][/]";
+
+                        if (isPaused)
+                            nowPlayingText += " [blue][[Paused]][/]";
+
                         // Now Playing Panel
-                        var nowPlayingPanel = new Panel($"[bold green]{currentTrack.Title}[/]")
+                        var nowPlayingPanel = new Panel(nowPlayingText)
                         {
                             Header = new PanelHeader("Now Playing"),
                             Border = BoxBorder.Rounded
@@ -148,8 +158,8 @@ namespace Musicaly
 
                         // Controls Panel
                         var controlsPanel = new Panel(
-                         "[white] [[P]] Prev | [[Space]] Pause | [[L]] Loop | [[S]] Skip | [[E]] Exit [/]"
-                         )
+                            "[white] [[P]] Prev | [[Space]] Pause | [[L]] Loop | [[J]] Jump | [[<-]] -5s | [[->]] +5s | [[S]] Skip | [[E]] Exit [/]"
+                            )
                         {
                             Border = BoxBorder.None
                         };
@@ -170,7 +180,6 @@ namespace Musicaly
                         // Simulate time passing for song progress
                         await Task.Delay(300);
 
-                        // For demonstration, increment by 5%
                         progress = audioFileReader.CurrentTime / audioFileReader.TotalTime * 100;
 
                         // Check for user key presses without blocking
@@ -179,14 +188,60 @@ namespace Musicaly
                             var key = Console.ReadKey(true).Key;
 
                             // Handle key presses
-                            // L - Loop, S - Skip, P - Previous, E - Exit
                             switch (key)
                             {
-                                case ConsoleKey.Spacebar: isPaused = !isPaused; break; // toggle pause/resume
-                                case ConsoleKey.L: loopRequested = !loopRequested; break; // toggle loop
-                                case ConsoleKey.S: skipRequested = true; break;
-                                case ConsoleKey.P: playPreviousRequested = true; break;
-                                case ConsoleKey.E: ExitRequested = true; return; // exit player
+                                case ConsoleKey.Spacebar:
+                                    isPaused = !isPaused;
+                                    break; // toggle pause/resume
+
+                                case ConsoleKey.L:
+                                    loopRequested = !loopRequested;
+                                    break; // toggle loop
+
+                                case ConsoleKey.S:
+                                    skipRequested = true;
+                                    break;
+
+                                case ConsoleKey.P:
+                                    playPreviousRequested = true;
+                                    break;
+
+                                case ConsoleKey.E:
+                                    ExitRequested = true;
+                                    return; // exit player
+
+                                // Seek backward 5 seconds
+                                case ConsoleKey.LeftArrow:
+                                    audioFileReader.CurrentTime -= TimeSpan.FromSeconds(5);
+                                    if (audioFileReader.CurrentTime < TimeSpan.Zero)
+                                        audioFileReader.CurrentTime = TimeSpan.Zero;
+                                    break;
+
+                                // Seek forward 5 seconds
+                                case ConsoleKey.RightArrow:
+                                    audioFileReader.CurrentTime += TimeSpan.FromSeconds(5);
+                                    if (audioFileReader.CurrentTime > audioFileReader.TotalTime)
+                                        audioFileReader.CurrentTime = audioFileReader.TotalTime;
+                                    break;
+
+                                // Jump to specific time
+                                case ConsoleKey.J:
+                                    {
+                                        Console.CursorVisible = true;
+                                        Console.Write("\nJump to (mm:ss): ");
+                                        string jumpInput = Console.ReadLine();
+                                        Console.CursorVisible = false;
+
+                                        if (TimeSpan.TryParseExact(jumpInput, @"m\:ss", null, out TimeSpan jumpTo))
+                                        {
+                                            if (jumpTo < audioFileReader.TotalTime)
+                                            {
+                                                audioFileReader.CurrentTime = jumpTo;
+                                            }
+                                        }
+                                        Console.Clear();
+                                        break;
+                                    }
                             }
                         }
 
