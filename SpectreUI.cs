@@ -96,7 +96,7 @@ namespace Musicaly
                     // Update the table until the song ends or user requests an action
                     while (Convert.ToInt32(progress) < 100)
                     {
-                        // --- GRID LAYOUT FOR PLAYER ---
+                        // GRID LAYOUT FOR PLAYER
                         var grid = new Grid();
                         grid.AddColumn();
                         grid.AddColumn();
