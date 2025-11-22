@@ -7,16 +7,32 @@ using System.Data;
 
 namespace Musicaly
 {
-    internal class SpectreUI
+    internal static class SpectreUI
     {
         // Property to track if exit is requested
-        public bool ExitRequested { get; private set; } = false;
-        public void ShowWelcomeMessage()
-        {
+        public static bool ExitRequested { get; private set; } = false;
+        public static string ShowWelcomeMessage() {
             AnsiConsole.MarkupLine("[bold green]Welcome to Musicaly![/]");
+            return AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .PageSize(3)
+                    .AddChoices(["Log In", "Register", "Exit"]));
         }
 
-        public async Task SpectreMusicUI()
+        public static string Username() {
+            return AnsiConsole.Prompt(
+                new TextPrompt<string>("Enter username. Leave empty to exit.")
+                    .AllowEmpty());
+        }
+
+        public static string Password() {
+            return AnsiConsole.Prompt(
+                new TextPrompt<string>("Enter password. Leave empty to exit.")
+                    .AllowEmpty()
+                    .Secret());
+        }
+
+        public static async Task SpectreMusicUI()
         {
             // We need to create instances of ViewMusic so that VivewMusic methods can be used.
             var viewMusic = new ViewMusic();
@@ -35,7 +51,7 @@ namespace Musicaly
                 new MultiSelectionPrompt<string>()
                 .PageSize(10)
                 .UseConverter(item => Markup.Escape(Path.GetFileNameWithoutExtension(item)))
-                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic))));
+                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Where(f => f != "C:\\Users\\Hugo\\Music\\desktop.ini")));
             foreach (string s in input) {
                 tracks.Add(new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(s)), Path = s, Duration = new AudioFileReader(s).TotalTime });
             }
@@ -191,7 +207,10 @@ namespace Musicaly
                         else waveOutEvent.Play();
                     }
 
-                    if (ExitRequested) break;
+                    if (ExitRequested) {
+                        waveOutEvent.Stop();
+                        break;
+                    }
 
                     // Handle user requests after stopping or finishing the song
                     if (playPreviousRequested)
