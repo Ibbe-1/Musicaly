@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Spectre.Console;
 using NAudio.Wave;
+using System.Data;
 
 namespace Musicaly
 {
@@ -78,62 +79,63 @@ namespace Musicaly
                 BorderStyle = new Style(Color.Grey, decoration: Decoration.Bold)
             }).StartAsync(async ctx =>
             {
-                // main loop runs until user requests exit
-                while (!ExitRequested)
+            // main loop runs until user requests exit
+            while (!ExitRequested)
+            {
+                // bools to track user requests
+                bool skipRequested = false;
+                bool playPreviousRequested = false;
+
+                // Simulate song progress
+                double progress = 0;
+
+                AudioFileReader audioFileReader = new AudioFileReader(currentTrack.Path);
+                waveOutEvent.Init(audioFileReader);
+                waveOutEvent.Play();
+
+                // Update the table until the song ends or user requests an action
+                while (Convert.ToInt32(progress) < 100)
                 {
-                    // bools to track user requests
-                    bool skipRequested = false;
-                    bool playPreviousRequested = false;
+                    table.Rows.Clear();
 
-                    // Simulate song progress
-                    double progress = 0;
+                    // Create a simple progress bar for the current song
+                    int barLength = 20; // length of the bar
+                    int filledLength = Convert.ToInt32(progress * barLength / 100);
+                    string bar = new string('■', filledLength) + new string('─', barLength - filledLength);
 
-                    AudioFileReader audioFileReader = new AudioFileReader(currentTrack.Path);
-                    waveOutEvent.Init(audioFileReader);
-                    waveOutEvent.Play();
+                    // Highlight the current song, add loop indicator if active
+                    string currentDisplay = loopRequested
+                        ? $"[bold green] {currentTrack.Title} [[Looping]][/]" // indicate that the song is being looped.
+                        : $"[bold green] {currentTrack.Title}[/]";
 
-                    // Update the table until the song ends or user requests an action
-                    while (Convert.ToInt32(progress) < 100)
-                    {
-                        table.Rows.Clear();
+                    //Show clear paused tag in blue 
+                    if (isPaused)
+                        currentDisplay += " [blue][[Paused]][/]";
 
-                        // Create a simple progress bar for the current song
-                        int barLength = 20; // length of the bar
-                        int filledLength = Convert.ToInt32(progress * barLength / 100);
-                        string bar = new string('■', filledLength) + new string('─', barLength - filledLength);
+                    bool ltHr = audioFileReader.TotalTime.TotalHours < 1;
+                    // Highlight the current song and show progress visually
+                    table.AddRow(
+                        currentDisplay,                      // current song highlighted, with loop indicator
+                        $"[dim]{nextTrack.Title}[/]",               // next song dimmed
+                        $"[cyan]{bar} {(ltHr ? audioFileReader.CurrentTime.ToString(@"mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"mm\:ss") : audioFileReader.CurrentTime.ToString(@"hh\:mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"hh\:mm\:ss"))}[/]"        // progress bar with percentage
+                    );
 
-                        // Highlight the current song, add loop indicator if active
-                        string currentDisplay = loopRequested
-                            ? $"[bold green] {currentTrack.Title} [[Looping]][/]" // indicate that the song is being looped.
-                            : $"[bold green] {currentTrack.Title}[/]";
+                    // Add controls row inside the table for style
+                    table.AddEmptyRow();
+                    table.AddRow(
+                        "[bold white]<- [[P]] Play Previous || [[Space]] Pause || [[L]] Loop || [[J]] Jump to || [[<- ->]] Arrows go back or forward 5 seconds. || [[S]] Skip -> || [[E]] Exit[/]",
+                        "",
+                        ""
+                    );
 
-                        //Show clear paused tag in blue 
-                        if (isPaused)
-                            currentDisplay += " [blue][[Paused]][/]";
+                    ctx.Refresh();
 
-                        bool ltHr = audioFileReader.TotalTime.TotalHours < 1;
-                        // Highlight the current song and show progress visually
-                        table.AddRow(
-                            currentDisplay,                      // current song highlighted, with loop indicator
-                            $"[dim]{nextTrack.Title}[/]",               // next song dimmed
-                            $"[cyan]{bar} {(ltHr ? audioFileReader.CurrentTime.ToString(@"mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"mm\:ss") : audioFileReader.CurrentTime.ToString(@"hh\:mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"hh\:mm\:ss"))}[/]"        // progress bar with percentage
-                        );
 
-                        // Add controls row inside the table for style
-                        table.AddEmptyRow();
-                        table.AddRow(
-                            "[bold white]<- [[P]] Play Previous || [[Space]] Pause || [[L]] Loop || [[S]] Skip -> || [[E]] Exit[/]",
-                            "",
-                            ""
-                        );
+                    // Simulate time passing for song progress
+                    await Task.Delay(300);
 
-                        ctx.Refresh();
-
-                        // Simulate time passing for song progress
-                        await Task.Delay(300);
-
-                        // For demonstration, increment by 5%
-                        progress = audioFileReader.CurrentTime / audioFileReader.TotalTime * 100;
+                    // For demonstration, increment by 5%
+                    progress = audioFileReader.CurrentTime / audioFileReader.TotalTime * 100;
 
                         // Check for user key presses without blocking
                         if (Console.KeyAvailable)
@@ -149,6 +151,37 @@ namespace Musicaly
                                 case ConsoleKey.S: skipRequested = true; break;
                                 case ConsoleKey.P: playPreviousRequested = true; break;
                                 case ConsoleKey.E: ExitRequested = true; return; // exit player
+
+                                // Seek backward 5 seconds
+                                case ConsoleKey.LeftArrow:
+                                    audioFileReader.CurrentTime -= TimeSpan.FromSeconds(5);
+                                    if (audioFileReader.CurrentTime < TimeSpan.Zero)
+                                        audioFileReader.CurrentTime = TimeSpan.Zero; break;
+                                // seek forward 5 seconds
+                                case ConsoleKey.RightArrow:
+                                    audioFileReader.CurrentTime += TimeSpan.FromSeconds(5);
+                                    if (audioFileReader.CurrentTime > audioFileReader.TotalTime)
+                                        audioFileReader.CurrentTime = audioFileReader.TotalTime; break;
+                                // Jump to specific time
+                                case ConsoleKey.J:
+                                    {
+
+                                        Console.CursorVisible = true;
+                                        Console.Write("\nJump to (mm:ss): ");
+                                        string jumpInput = Console.ReadLine();
+                                        Console.CursorVisible = false;
+
+                                        if (TimeSpan.TryParseExact(jumpInput, @"m\:ss", null, out TimeSpan jumpTo))
+                                        {
+                                            if (jumpTo < audioFileReader.TotalTime)
+                                            {
+                                                audioFileReader.CurrentTime = jumpTo;
+                                            }
+                                        }
+                                        Console.Clear();
+                                        break;
+                                    }
+
                             }
                         }
 
