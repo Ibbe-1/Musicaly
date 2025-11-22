@@ -80,34 +80,19 @@ namespace Musicaly
                 BorderStyle = new Style(Color.Grey, decoration: Decoration.Bold)
             }).StartAsync(async ctx =>
             {
-            // main loop runs until user requests exit
-            while (!ExitRequested)
-            {
-                // bools to track user requests
-                bool skipRequested = false;
-                bool playPreviousRequested = false;
-
-                // Simulate song progress
-                double progress = 0;
-
-                AudioFileReader audioFileReader = new AudioFileReader(currentTrack.Path);
-                waveOutEvent.Init(audioFileReader);
-                waveOutEvent.Play();
-
-                // Update the table until the song ends or user requests an action
-                while (Convert.ToInt32(progress) < 100)
+                // main loop runs until user requests exit
+                while (!ExitRequested)
                 {
-                    table.Rows.Clear();
+                    // bools to track user requests
+                    bool skipRequested = false;
+                    bool playPreviousRequested = false;
 
-                    // Create a simple progress bar for the current song
-                    int barLength = 20; // length of the bar
-                    int filledLength = Convert.ToInt32(progress * barLength / 100);
-                    string bar = new string('■', filledLength) + new string('─', barLength - filledLength);
+                    // Simulate song progress
+                    double progress = 0;
 
-                    // Highlight the current song, add loop indicator if active
-                    string currentDisplay = loopRequested
-                        ? $"[bold green] {currentTrack.Title} [[Looping]][/]" // indicate that the song is being looped.
-                        : $"[bold green] {currentTrack.Title}[/]";
+                    AudioFileReader audioFileReader = new AudioFileReader(currentTrack.Path);
+                    waveOutEvent.Init(audioFileReader);
+                    waveOutEvent.Play();
 
                     // Update the table until the song ends or user requests an action
                     while (Convert.ToInt32(progress) < 100)
