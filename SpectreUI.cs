@@ -154,14 +154,12 @@ namespace Musicaly
 
                                 // Seek backward 5 seconds
                                 case ConsoleKey.LeftArrow:
-                                    audioFileReader.CurrentTime -= TimeSpan.FromSeconds(5);
-                                    if (audioFileReader.CurrentTime < TimeSpan.Zero)
-                                        audioFileReader.CurrentTime = TimeSpan.Zero; break;
+                                    audioFileReader.CurrentTime = audioFileReader.CurrentTime < TimeSpan.FromSeconds(5) ? TimeSpan.Zero : audioFileReader.CurrentTime -= TimeSpan.FromSeconds(5);
+                                    break;
                                 // seek forward 5 seconds
                                 case ConsoleKey.RightArrow:
-                                    audioFileReader.CurrentTime += TimeSpan.FromSeconds(5);
-                                    if (audioFileReader.CurrentTime > audioFileReader.TotalTime)
-                                        audioFileReader.CurrentTime = audioFileReader.TotalTime; break;
+                                    audioFileReader.CurrentTime = audioFileReader.CurrentTime > audioFileReader.TotalTime ? audioFileReader.TotalTime : audioFileReader.CurrentTime += TimeSpan.FromSeconds(5);
+                                    break;
                                 // Jump to specific time
                                 case ConsoleKey.J:
                                     {
