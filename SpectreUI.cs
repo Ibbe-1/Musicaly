@@ -132,7 +132,7 @@ namespace Musicaly
 
 
                     // Simulate time passing for song progress
-                    await Task.Delay(300);
+                    await Task.Delay(10);
 
                     // For demonstration, increment by 5%
                     progress = audioFileReader.CurrentTime / audioFileReader.TotalTime * 100;
