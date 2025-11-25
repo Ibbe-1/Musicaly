@@ -18,13 +18,13 @@ namespace Musicaly
 
         public static string Username() {
             return AnsiConsole.Prompt(
-                new TextPrompt<string>("Enter username. Leave empty to exit.")
+                new TextPrompt<string>("Enter username:")
                     .AllowEmpty());
         }
 
         public static string Password() {
             return AnsiConsole.Prompt(
-                new TextPrompt<string>("Enter password. Leave empty to exit.")
+                new TextPrompt<string>("Enter password:")
                     .AllowEmpty()
                     .Secret());
         }
