@@ -19,25 +19,27 @@ namespace Musicaly {
             catch {
                 File.Create(usersPath).Close();
             }
+            //If a user changes something which needs to be saved like making a playlist SaveJSON gets called
+            users.ForEach(u => u.Changed += SaveJSON);
         }
 
         public string Hash(string p) {
             return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(p))).Replace("-", "");
         }
-        public bool LogIn() {
+        public User LogIn() {
             string userName = SpectreUI.Username();
             while (!users.Exists(u => u.UserName.Equals(userName))) {
                 if (userName != "") Console.WriteLine("Username does not exist.");
-                else return false;
+                else return null;
                 userName = SpectreUI.Username();
             }
             string password = Hash(SpectreUI.Password());
-            while (!users.Exists(u => u.Password.Equals(password))) {
+            while (!users.Exists(u => u.Password.Equals(password) && u.UserName.Equals(userName))) {
                 if (password != Hash("")) Console.WriteLine("Incorrect password.");
-                else return false;
+                else return null;
                 password = Hash(SpectreUI.Password());
             }
-            return true;
+            return users.First(u => u.UserName.Equals(userName) && u.Password.Equals(password));
         }
         public void Register() {
             string userName = SpectreUI.Username();
@@ -76,7 +78,11 @@ namespace Musicaly {
                 }
                 break;
             }
-            users.Add(new User() { UserName = userName, Password = Hash(password)});
+            users.Add(new User() { UserName = userName, Password = Hash(password) });
+            SaveJSON(users.Last());
+        }
+
+        private void SaveJSON(User user) {
             File.WriteAllText(usersPath, JsonSerializer.Serialize(users));
         }
     }
