@@ -11,7 +11,7 @@ namespace Musicaly {
         public string Path { get; set; }
         public TimeSpan Duration { get; set; }
 
-        internal static objekt RemoveAt(int removeIndex)
+        internal static object RemoveAt(int removeIndex)
         {
             throw new NotImplementedException();
         }

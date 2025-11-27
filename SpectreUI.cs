@@ -10,6 +10,7 @@ namespace Musicaly
 {
     internal class SpectreUI
     {
+      
         // Property to track if exit is requested
         public bool ExitRequested { get; private set; } = false;
         public void ShowWelcomeMessage()
