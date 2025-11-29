@@ -8,8 +8,6 @@ namespace Musicaly
 {
     internal static class SpectreUI
     {
-        // Property to track if exit is requested
-        public static bool ExitRequested { get; private set; } = false;
         public static string ShowWelcomeMessage() {
             AnsiConsole.MarkupLine("[bold green]Welcome to Musicaly![/]");
             return AnsiConsole.Prompt(
@@ -20,19 +18,55 @@ namespace Musicaly
 
         public static string Username() {
             return AnsiConsole.Prompt(
-                new TextPrompt<string>("Enter username. Leave empty to exit.")
+                new TextPrompt<string>("Enter username:")
                     .AllowEmpty());
         }
 
         public static string Password() {
             return AnsiConsole.Prompt(
-                new TextPrompt<string>("Enter password. Leave empty to exit.")
+                new TextPrompt<string>("Enter password:")
                     .AllowEmpty()
                     .Secret());
         }
 
-        public static async Task SpectreMusicUI()
-        {
+        public static string UserMenu(User user) {
+            return user.playlists.Any() ? AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                .PageSize(5)
+                .AddChoices(["Choose playlist", "Create playlist", "Edit playlist", "Delete playlist", "Logout"])) : AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                .PageSize(3)
+                .AddChoices(["Create playlist", "Logout"]));
+        }
+
+        public async static Task UserMenuDropdown(User user) {
+            while (true) {
+                Console.Clear();
+                string choice;
+                switch (choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                .PageSize(user.playlists.Count() + 5)
+                .AddChoices("Choose playlist")
+                .AddChoiceGroup("Playlists", user.playlists.Select(p => p.Title))
+                .AddChoices(["Create playlist", "Delete playlist", "Logout"]))) {
+                    case "Choose playlist":
+                        return;
+                    case "Create playlist":
+                        user.CreatePlaylist();
+                        break;
+                    case "Delete playlist":
+                        user.DeletePlaylist();
+                        break;
+                    case "Logout":
+                        return;
+                    default:
+                        await SpectreMusicUI(user.playlists.Find(p => p.Title.Equals(choice)));
+                        return;
+                }
+            }
+        }
+
+        public static async Task SpectreMusicUI(Playlist playlist) {
             // We need to create instances of ViewMusic so that VivewMusic methods can be used.
             var viewMusic = new ViewMusic();
 
@@ -42,32 +76,20 @@ namespace Musicaly
             table.AddColumn("Next Up");
             table.AddColumn("Progress");
 
-            // Ask user to input songs
-            // Collect songs from user
-            // CHANGE THIS LATER WHEN PUTTING ACTUAL SONGS, WE WANT TO LOAD FROM A PLAYLIST.
-            List<Track> tracks = new List<Track>();
-            List<string> input = AnsiConsole.Prompt(
-                new MultiSelectionPrompt<string>()
-                .PageSize(10)
-                .UseConverter(item => Markup.Escape(Path.GetFileNameWithoutExtension(item)))
-                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Where(f => f != "C:\\Users\\Hugo\\Music\\desktop.ini")));
-            foreach (string s in input) {
-                tracks.Add(new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(s)), Path = s, Duration = new AudioFileReader(s).TotalTime });
-            }
-
             // Ensure there are at least 2 songs
-            if (tracks.Count < 2)
-            {
+            if (playlist.tracks.Count < 2) {
                 Console.WriteLine("You need at least 2 songs to start the player.");
                 return;
             }
 
             // Initialize current, next, previous
             int trackIndex = 0;
-            Track currentTrack = tracks[trackIndex];
-            Track nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+            Track currentTrack = playlist.tracks[trackIndex];
+            Track nextTrack = playlist.tracks[(trackIndex + 1) % playlist.tracks.Count];
             string previousSong = "";
 
+            // Property to track if exit is requested
+            bool ExitRequested = false;
             //Håller koll om musiken är pausad
             bool isPaused = false;
 
@@ -78,16 +100,13 @@ namespace Musicaly
             WaveOutEvent waveOutEvent = new WaveOutEvent();
 
             // Use a single Live display for the table wrapped in a Panel
-            await AnsiConsole.Live(new Panel(table)
-            {
+            await AnsiConsole.Live(new Panel(table) {
                 Header = new PanelHeader("[bold yellow]Musicaly Player[/]"),
                 Border = BoxBorder.Rounded,
                 BorderStyle = new Style(Color.Grey, decoration: Decoration.Bold)
-            }).StartAsync(async ctx =>
-            {
+            }).StartAsync(async ctx => {
                 // main loop runs until user requests exit
-                while (!ExitRequested)
-                {
+                while (!ExitRequested) {
                     // bools to track user requests
                     bool skipRequested = false;
                     bool playPreviousRequested = false;
@@ -96,12 +115,18 @@ namespace Musicaly
                     double progress = 0;
 
                     AudioFileReader audioFileReader = new AudioFileReader(currentTrack.Path);
-                    waveOutEvent.Init(audioFileReader);
+                    try {
+                        waveOutEvent.Init(audioFileReader);
+                    }
+                    catch (Exception ex) {
+                        Console.WriteLine(ex.Message + ". Press any key to continue.");
+                        Console.ReadKey();
+                        return;
+                    }
                     waveOutEvent.Play();
 
                     // Update the table until the song ends or user requests an action
-                    while (Convert.ToInt32(progress) < 100)
-                    {
+                    while (Convert.ToInt32(progress) < 100) {
                         table.Rows.Clear();
 
                         // Create a simple progress bar for the current song
@@ -143,49 +168,45 @@ namespace Musicaly
                         progress = audioFileReader.CurrentTime / audioFileReader.TotalTime * 100;
 
                         // Check for user key presses without blocking
-                        if (Console.KeyAvailable)
-                        {
+                        if (Console.KeyAvailable) {
                             var key = Console.ReadKey(true).Key;
 
                             // Handle key presses
                             // L - Loop, S - Skip, P - Previous, E - Exit
-                            switch (key)
-                            {
+                            switch (key) {
                                 case ConsoleKey.Spacebar: isPaused = !isPaused; break; // toggle pause/resume
                                 case ConsoleKey.L: loopRequested = !loopRequested; break; // toggle loop
                                 case ConsoleKey.S: skipRequested = true; break;
                                 case ConsoleKey.P: playPreviousRequested = true; break;
-                                case ConsoleKey.E: ExitRequested = true; return; // exit player
+                                case ConsoleKey.E: ExitRequested = true; break; // exit player
                             }
                         }
 
+                        if (ExitRequested) {
+                            waveOutEvent.Stop();
+                            return;
+                        }
                         if (skipRequested || playPreviousRequested)
                             break; // immediately stop current song
                         if (isPaused) waveOutEvent.Pause();
                         else waveOutEvent.Play();
                     }
 
-                    if (ExitRequested) {
-                        waveOutEvent.Stop();
-                        break;
-                    }
-
                     // Handle user requests after stopping or finishing the song
-                    if (playPreviousRequested)
-                    {
+                    if (playPreviousRequested) {
                         // Move to previous song in the playlist
                         trackIndex--;
                         if (trackIndex < 0)
-                            trackIndex = tracks.Count - 1;
+                            trackIndex = playlist.tracks.Count - 1;
 
-                        currentTrack = tracks[trackIndex];
-                        nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+                        currentTrack = playlist.tracks[trackIndex];
+                        nextTrack = playlist.tracks[(trackIndex + 1) % playlist.tracks.Count];
                     }
                     else if (skipRequested || !loopRequested) // move to next song if skipped or finished naturally
                     {
-                        trackIndex = (trackIndex + 1) % tracks.Count;
-                        currentTrack = tracks[trackIndex];
-                        nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+                        trackIndex = (trackIndex + 1) % playlist.tracks.Count;
+                        currentTrack = playlist.tracks[trackIndex];
+                        nextTrack = playlist.tracks[(trackIndex + 1) % playlist.tracks.Count];
                     }
 
                     waveOutEvent.Stop();

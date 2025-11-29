@@ -14,9 +14,29 @@ namespace Musicaly
                 Console.Clear();
                 switch (SpectreUI.ShowWelcomeMessage()) {
                     case "Log In":
-                        if (userManager.LogIn()) {
-                            Console.Clear();
-                            await SpectreUI.SpectreMusicUI();
+                        User loggedInUser = userManager.LogIn();
+                        if (loggedInUser != null) {
+                            while (!exitRequested) {
+                                Console.Clear();
+                                switch (SpectreUI.UserMenu(loggedInUser)) {
+                                    case "Choose playlist":
+                                        await SpectreUI.UserMenuDropdown(loggedInUser);
+                                        break;
+                                    case "Create playlist":
+                                        loggedInUser.CreatePlaylist();
+                                        break;
+                                    case "Edit playlist":
+                                        loggedInUser.EditPlaylist();
+                                        break;
+                                    case "Delete playlist":
+                                        loggedInUser.DeletePlaylist();
+                                        break;
+                                    case "Logout":
+                                        exitRequested = true;
+                                        break;
+                                }
+                            }
+                            exitRequested = false;
                         }
                         break;
                     case "Register":
