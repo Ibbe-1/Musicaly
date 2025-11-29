@@ -14,27 +14,81 @@ namespace Musicaly {
         public event Action<User>? Changed;
 
         public void CreatePlaylist() {
-            playlists.Add(new Playlist() {
-                Title = AnsiConsole.Prompt(
-                new TextPrompt<string>("Title:")
-                .Validate(item => playlists.Exists(p => p.Title.Equals(item)) ? ValidationResult.Error("Playlist already exists") : ValidationResult.Success())),
+            string[] files = Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Where(f => f != "C:\\Users\\Hugo\\Music\\desktop.ini").ToArray();
+            string title = AnsiConsole.Prompt(
+                new TextPrompt<string>("[grey](Leave empty to exit)[/]\nTitle:")
+                .Validate(item => playlists.Exists(p => p.Title.Equals(item)) ? ValidationResult.Error("[red]Playlist already exists.[/]") : ValidationResult.Success())
+                .AllowEmpty());
+            if (title != "") playlists.Add(new Playlist() {
+                Title = title,
                 tracks = AnsiConsole.Prompt(
                 new MultiSelectionPrompt<Track>()
-                .PageSize(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Where(f => f != "C:\\Users\\Hugo\\Music\\desktop.ini").Count() < 3 ? 3 : Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Where(f => f != "C:\\Users\\Hugo\\Music\\desktop.ini").Count())
+                .PageSize(files.Count() < 3 ? 3 : files.Count())
                 .UseConverter(item => item.Title)
-                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Where(f => f != "C:\\Users\\Hugo\\Music\\desktop.ini").Select(t => new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(t)), Path = t, Duration = new AudioFileReader(t).TotalTime })))
+                .AddChoices(files.Select(t => new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(t)), Path = t, Duration = new AudioFileReader(t).TotalTime })))
             });
+            else return;
             //Alerts UserManager something has changed
             Changed?.Invoke(this);
         }
 
         public void DeletePlaylist() {
-            playlists.Remove(AnsiConsole.Prompt(
-                new SelectionPrompt<Playlist>()
+            List<Playlist> playlistsDelete = AnsiConsole.Prompt(
+                new MultiSelectionPrompt<Playlist>()
                 .PageSize(playlists.Count() < 3 ? 3 : playlists.Count())
                 .Title("Choose playlist to delete.")
                 .UseConverter(item => item.Title)
-                .AddChoices(playlists)));
+                .AddChoices(playlists));
+            if (AnsiConsole.Prompt(
+                new TextPrompt<bool>("Delete playlist(s):\n" + string.Join('\n', playlistsDelete.Select(p => p.Title)) + "?")
+                    .AddChoice(true)
+                    .AddChoice(false)
+                    .DefaultValue(false)
+                    .WithConverter(choice => choice ? "y" : "n"))) playlists.RemoveAll(p => playlistsDelete.Contains(p));
+            Changed?.Invoke(this);
+        }
+
+        public void EditPlaylist() {
+            List<Track> tracks = new List<Track>();
+            Playlist playlist = AnsiConsole.Prompt(
+                new SelectionPrompt<Playlist>()
+                .PageSize(playlists.Count() < 3 ? 3 : playlists.Count())
+                .Title("Choose playlist to edit.")
+                .UseConverter(item => item.Title)
+                .AddChoices(playlists));
+            Console.Clear();
+            switch (AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                .PageSize(3)
+                .AddChoices(["Add tracks", "Delete tracks"]))) {
+                case "Add tracks":
+                    string[] files = Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Where(f => f != "C:\\Users\\Hugo\\Music\\desktop.ini").ToArray();
+                    tracks = AnsiConsole.Prompt(
+                new MultiSelectionPrompt<Track>()
+                .PageSize(files.Count() < 3 ? 3 : files.Count())
+                .UseConverter(item => item.Title)
+                .AddChoices(files.Where(f => !playlist.tracks.Exists(t => t.Title.Equals(Markup.Escape(Path.GetFileNameWithoutExtension(f))))).Select(t => new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(t)), Path = t, Duration = new AudioFileReader(t).TotalTime })));
+                    if (AnsiConsole.Prompt(
+                new TextPrompt<bool>("Add track(s):\n" + string.Join('\n', tracks.Select(t => t.Title)) + "?")
+                    .AddChoice(true)
+                    .AddChoice(false)
+                    .DefaultValue(false)
+                    .WithConverter(choice => choice ? "y" : "n"))) playlist.tracks.AddRange(tracks);
+                    break;
+                case "Delete tracks":
+                    tracks = AnsiConsole.Prompt(
+                new MultiSelectionPrompt<Track>()
+                .PageSize(playlist.tracks.Count() < 3 ? 3 : playlist.tracks.Count())
+                .UseConverter(item => item.Title)
+                .AddChoices(playlist.tracks));
+                    if (AnsiConsole.Prompt(
+                new TextPrompt<bool>("Delete track(s):\n" + string.Join('\n', tracks.Select(t => t.Title)) + "?")
+                    .AddChoice(true)
+                    .AddChoice(false)
+                    .DefaultValue(false)
+                    .WithConverter(choice => choice ? "y" : "n"))) playlist.tracks.RemoveAll(t => tracks.Contains(t));
+                    break;
+            }
             Changed?.Invoke(this);
         }
     }

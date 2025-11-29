@@ -18,13 +18,13 @@ namespace Musicaly
 
         public static string Username() {
             return AnsiConsole.Prompt(
-                new TextPrompt<string>("Enter username. Leave empty to exit.")
+                new TextPrompt<string>("Enter username:")
                     .AllowEmpty());
         }
 
         public static string Password() {
             return AnsiConsole.Prompt(
-                new TextPrompt<string>("Enter password. Leave empty to exit.")
+                new TextPrompt<string>("Enter password:")
                     .AllowEmpty()
                     .Secret());
         }
@@ -32,8 +32,8 @@ namespace Musicaly
         public static string UserMenu(User user) {
             return user.playlists.Any() ? AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                .PageSize(4)
-                .AddChoices(["Choose playlist", "Create playlist", "Delete playlist", "Logout"])) : AnsiConsole.Prompt(
+                .PageSize(5)
+                .AddChoices(["Choose playlist", "Create playlist", "Edit playlist", "Delete playlist", "Logout"])) : AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                 .PageSize(3)
                 .AddChoices(["Create playlist", "Logout"]));
@@ -45,7 +45,7 @@ namespace Musicaly
                 string choice;
                 switch (choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                .PageSize(user.playlists.Count() + 4)
+                .PageSize(user.playlists.Count() + 5)
                 .AddChoices("Choose playlist")
                 .AddChoiceGroup("Playlists", user.playlists.Select(p => p.Title))
                 .AddChoices(["Create playlist", "Delete playlist", "Logout"]))) {

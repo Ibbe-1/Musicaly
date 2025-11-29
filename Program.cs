@@ -25,6 +25,9 @@ namespace Musicaly
                                     case "Create playlist":
                                         loggedInUser.CreatePlaylist();
                                         break;
+                                    case "Edit playlist":
+                                        loggedInUser.EditPlaylist();
+                                        break;
                                     case "Delete playlist":
                                         loggedInUser.DeletePlaylist();
                                         break;
