@@ -227,7 +227,7 @@ namespace Musicaly
                                                     });
 
                                                     Console.WriteLine("Song added to Playlist!");
-                                                    //Uppdate nextTrack
+                                                    //Uppdate, nextTrack
                                                     nextTrack = tracks[(trackIndex + 1) % tracks.Count];
                                                 }
                                                 else
