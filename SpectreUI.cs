@@ -250,16 +250,18 @@ namespace Musicaly
 
                                 case ConsoleKey.D: //Delete Song (D)
                                 {
-                                    waveOutEvent.Pause();
+                                    waveOutEvent.Pause();    //pause while user chooses song
                                     Console.Clear();
                                     Console.WriteLine("Remove song from playlist");
 
+                                    //if playlist empty stop here
                                     if (tracks.Count == 0)
                                     {
                                         Console.WriteLine("No song in playlist.");
                                     }
                                     else
-                                    {
+                                    { 
+                                       //Show all song with numbers 
                                        for (int i = 0; i < tracks.Count; i++)
                                        {
                                           Console.WriteLine($"{i + 1}. {tracks[i].Title}");
@@ -268,21 +270,24 @@ namespace Musicaly
                                        Console.WriteLine("\nEnter the number of the song you want to remove (or press Enter to cancel):");
                                        string removeInput = Console.ReadLine();
 
+                                        //check invalid or empty input
                                        if (!string.IsNullOrWhiteSpace(removeInput) && int.TryParse(removeInput, out int removeIndex))
                                        {
                                           removeIndex -= 1;
                                           if (removeIndex >= 0 && removeIndex < tracks.Count)
                                           {
-                                              //Tillåt inte att ta bort låten som spelas 
+                                              //Do not remove currently playing song
                                               if (removeIndex == trackIndex)
                                               {
                                                  Console.WriteLine("You can not remove the song that is currently playing");
                                               }
                                               else
                                               {
+                                                  //Remove song 
                                                   tracks.RemoveAt(removeIndex);
                                                   Console.WriteLine("Song removed from playlist!");
 
+                                                  //fix index if needed
                                                   if (trackIndex >= tracks.Count)
                                                   trackIndex = 0;
 
@@ -306,6 +311,8 @@ namespace Musicaly
                                     Console.WriteLine("Press any key to return to player.");
                                     Console.ReadKey(true);
                                     Console.Clear();
+
+                                    //Continue playing if not paused
                                     if (!isPaused) waveOutEvent.Play();
                                     break;
                                 }
