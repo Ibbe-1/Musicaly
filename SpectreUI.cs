@@ -10,7 +10,8 @@ namespace Musicaly
 {
     internal class SpectreUI
     {
-      
+        private string filePath;
+
         // Property to track if exit is requested
         public bool ExitRequested { get; private set; } = false;
         public void ShowWelcomeMessage()
@@ -150,25 +151,27 @@ namespace Musicaly
                                 case ConsoleKey.E:
                                     ExitRequested = true; //exit player 
                                     return;
-                                //paus with spacebar
+                                //paus with spacebar or continue w music 
                                 case ConsoleKey.Spacebar:
                                     if (isPaused)
                                     {
                                         waveOutEvent.Play();   //continue playing
-                                        isPaused = false;
+                                        isPaused = false;      // song is now playing 
                                     }
                                     else
                                     {
-                                        waveOutEvent.Pause();  //pause playing
-                                        isPaused = true;
+                                        waveOutEvent.Pause();  //pause t music
+                                        isPaused = true;       // song is now paused 
                                     }
                                     break;  //Spacebar stops here
 
                                 case ConsoleKey.V: //show playlist (V)
                                 { 
-                                    waveOutEvent.Pause();
+                                    waveOutEvent.Pause();      // pause music while viewing playlist 
                                     Console.Clear();
                                     Console.WriteLine("Current Playlist:");
+
+                                    //Loop through all songs & display them
                                     for (int i = 0; i < tracks.Count; i++)
                                     {
                                         Console.WriteLine($"{i + 1}. {tracks[i].Title}");
@@ -176,44 +179,50 @@ namespace Musicaly
                                     Console.WriteLine("\nPress any key to return to player...");
                                     Console.ReadKey(true);
                                     Console.Clear();
-                                    if (!isPaused) waveOutEvent.Play();
+                                    if (!isPaused) waveOutEvent.Play();     // resume music if wasnt paused
                                     }
                                     break;
 
 
                                 case ConsoleKey.A:  // ADD Music (A)
                                     {
+                                        //paused the currently playing song
                                         waveOutEvent.Pause();
                                         Console.Clear();
                                         Console.WriteLine("Add more songs to the folder:");
 
+                                        //Get the path to the user´s Music folder
                                         string musicFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
+
+                                        //Get all audio files inside t music folder 
                                         string[] allFiles = Directory.GetFiles(musicFolder);
 
+                                        //No music files stop here 
                                         if (allFiles.Length == 0)
                                         {
-                                            Console.WriteLine("No music files found in the Music folder.");
+                                            Console.WriteLine("No music files found.");
                                         }
                                         else
                                         {
-                                            Console.WriteLine("Avalailable files:");
+     
+                                            //Display all songs with numbers 
                                             for (int i = 0; i < allFiles.Length; i++)
                                                 Console.WriteLine($"{i + 1}. {Path.GetFileNameWithoutExtension(allFiles[i])}");
 
                                             Console.WriteLine("\nEnter the number of the songs you want to add ( or press Enter to cancel:");
-                                            string addInput = Console.ReadLine();
+                                            string input = Console.ReadLine();
 
-                                            if (!string.IsNullOrWhiteSpace(addInput) && int.TryParse(addInput, out int addIndex))
+                                            if (int.TryParse(input,out int index))
                                             {
-                                                addIndex -= 1;
-                                                if (addIndex >= 0 && addIndex < allFiles.Length)
+                                                index--; //conver 1 -> 0
+                                                if (index >= 0 && index < allFiles.Length)
                                                 {
-                                                    string filePath = allFiles[addIndex];
+                                                    string file = allFiles[index];
 
                                                     tracks.Add(new Track()
                                                     {
-                                                        Title = Markup.Escape(Path.GetFileNameWithoutExtension(filePath)),
-                                                        Path = filePath,
+                                                        Title = Path.GetFileNameWithoutExtension(file),
+                                                        Path = file,
                                                         Duration = new AudioFileReader(filePath).TotalTime,
                                                     });
 
