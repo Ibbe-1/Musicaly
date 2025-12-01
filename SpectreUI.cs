@@ -189,7 +189,7 @@ namespace Musicaly
                                 i == trackIndex ? $"[green]> {t.Title}[/]" : $"  {t.Title}"
                             ));
 
-                        var playlistPanel = new Panel(playlistDisplay)
+                        var playlistPanel = new Panel(playlist)
                         {
                             Header = new PanelHeader("Playlist"),
                             Border = BoxBorder.Rounded
