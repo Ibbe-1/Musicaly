@@ -14,7 +14,7 @@ namespace Musicaly {
         public event Action<User>? Changed;
 
         public void CreatePlaylist() {
-            string[] files = Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Where(f => f != "C:\\Users\\Hugo\\Music\\desktop.ini").ToArray();
+            string[] files = Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic)).Where(f => f != Environment.GetFolderPath(Environment.SpecialFolder.MyMusic) + "\\desktop.ini").ToArray();
             string title = AnsiConsole.Prompt(
                 new TextPrompt<string>("[grey](Leave empty to exit)[/]\nTitle:")
                 .Validate(item => playlists.Exists(p => p.Title.Equals(item)) ? ValidationResult.Error("[red]Playlist already exists.[/]") : ValidationResult.Success())
