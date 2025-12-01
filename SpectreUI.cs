@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Spectre.Console;
 using NAudio.Wave;
+using System.IO;
+using System.ComponentModel.Design;
 using System.Data;
 
 namespace Musicaly
 {
     internal class SpectreUI
     {
+      
         // Property to track if exit is requested
         public bool ExitRequested { get; private set; } = false;
         public void ShowWelcomeMessage()
@@ -54,9 +57,6 @@ namespace Musicaly
             Track nextTrack = tracks[(trackIndex + 1) % tracks.Count];
             string previousSong = "";
 
-            //Håller koll om musiken är pausad
-            bool isPaused = false;
-
             viewMusic.ShowAllSongs(tracks.Select(t => t.Title).ToList()); // Show all songs, we need this here.
             // this needs to be fixed currently it shows no songs
             // also implement a way to popout the viewer so that it doesn't interfere with the player UI
@@ -65,11 +65,14 @@ namespace Musicaly
             Console.WriteLine();
             Console.WriteLine("Controls:");
             Console.WriteLine("<- [P] Play Previous || [L] Loop ||  [S] Skip  -> || [E] Exit");
+            Console.WriteLine("[Space] Pause/Resume || [V] View Playlist || [A] Add Song || [D] Delete Song");
             Console.WriteLine();
             Console.Clear();
 
+
             // bool to track loop request
             bool loopRequested = false;
+            bool isPaused = false;
             WaveOutEvent waveOutEvent = new WaveOutEvent();
 
             // Use a single Live display for the table wrapped in a Panel
@@ -158,7 +161,7 @@ namespace Musicaly
 
                         // Controls Panel
                         var controlsPanel = new Panel(
-                            "[white] [[P]] Prev | [[Space]] Pause | [[L]] Loop | [[J]] Jump | [[<-]] -5s | [[->]] +5s | [[S]] Skip | [[E]] Exit [/]"
+                            "[white] [[P]] Prev | [[Space]] Pause | [[L]] Loop | | [[D]] Del Music | [[A]] Add Music | [[J]] Jump | [[<-]] -5s | [[->]] +5s | [[S]] Skip | [[E]] Exit [/]"
                             )
                         {
                             Border = BoxBorder.None
@@ -242,6 +245,129 @@ namespace Musicaly
                                         Console.Clear();
                                         break;
                                     }
+
+
+                                case ConsoleKey.A:  // ADD Music (A)
+                                    {
+                                        waveOutEvent.Pause();
+                                        Console.Clear();
+                                        Console.WriteLine("Add more songs to the folder:");
+
+                                        string musicFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
+                                        string[] allFiles = Directory.GetFiles(musicFolder);
+
+                                        if (allFiles.Length == 0)
+                                        {
+                                            Console.WriteLine("No music files found in the Music folder.");
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine("Avalailable files:");
+                                            for (int i = 0; i < allFiles.Length; i++)
+                                                Console.WriteLine($"{i + 1}. {Path.GetFileNameWithoutExtension(allFiles[i])}");
+
+                                            Console.WriteLine("\nEnter the number of the songs you want to add ( or press Enter to cancel:");
+                                            string addInput = Console.ReadLine();
+
+                                            if (!string.IsNullOrWhiteSpace(addInput) && int.TryParse(addInput, out int addIndex))
+                                            {
+                                                addIndex -= 1;
+                                                if (addIndex >= 0 && addIndex < allFiles.Length)
+                                                {
+                                                    string filePath = allFiles[addIndex];
+
+                                                    tracks.Add(new Track()
+                                                    {
+                                                        Title = Markup.Escape(Path.GetFileNameWithoutExtension(filePath)),
+                                                        Path = filePath,
+                                                        Duration = new AudioFileReader(filePath).TotalTime,
+                                                    });
+
+                                                    Console.WriteLine("Song added to Playlist!");
+                                                    //Uppdate nextTrack
+                                                    nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+                                                }
+                                                else
+                                                {
+                                                    Console.WriteLine("Invalid number.");
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Console.WriteLine("Canceled.");
+                                            }
+                                        }
+
+                                        Console.WriteLine("Press any key to return to plater.");
+                                        Console.ReadKey(true);
+                                        Console.Clear();
+                                        if (!isPaused) waveOutEvent.Play();
+                                        break;
+                                    }
+
+                                case ConsoleKey.D: //Delete Song (D)
+                                    {
+                                        waveOutEvent.Pause();
+                                        Console.Clear();
+                                        Console.WriteLine("Remove song from playlist");
+
+                                        if (tracks.Count == 0)
+                                        {
+                                            Console.WriteLine("No song in playlist.");
+                                        }
+                                        else
+                                        {
+                                            for (int i = 0; i < tracks.Count; i++)
+                                            {
+                                                Console.WriteLine($"{i + 1}. {tracks[i].Title}");
+                                            }
+
+                                            Console.WriteLine("\nEnter the number of the song you want to remove (or press Enter to cancel):");
+                                            string removeInput = Console.ReadLine();
+
+                                            if (!string.IsNullOrWhiteSpace(removeInput) && int.TryParse(removeInput, out int removeIndex))
+                                            {
+                                                removeIndex -= 1;
+                                                if (removeIndex >= 0 && removeIndex < tracks.Count)
+                                                {
+                                                    //Tillåt inte att ta bort låten som spelas 
+                                                    if (removeIndex == trackIndex)
+                                                    {
+                                                        Console.WriteLine("You can not remove the song that is currently playing");
+                                                    }
+                                                    else
+                                                    {
+                                                        tracks.RemoveAt(removeIndex);
+                                                        Console.WriteLine("Song removed from playlist!");
+
+                                                        if (trackIndex >= tracks.Count)
+                                                            trackIndex = 0;
+
+                                                        currentTrack = tracks[trackIndex];
+                                                        nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+
+                                                    }
+
+                                                }
+                                                else
+                                                {
+                                                    Console.WriteLine("Invalid number.");
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Console.WriteLine("Canceled.");
+                                            }
+                                        }
+
+                                        Console.WriteLine("Press any key to return to player.");
+                                        Console.ReadKey(true);
+                                        Console.Clear();
+                                        if (!isPaused) waveOutEvent.Play();
+                                        break;
+                                    }
+
+
                             }
                         }
 
@@ -282,3 +408,4 @@ namespace Musicaly
         }
     }
 }
+ 
