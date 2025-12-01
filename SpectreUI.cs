@@ -138,13 +138,6 @@ namespace Musicaly
                     // Update the table until the song ends or user requests an action
                     while (Convert.ToInt32(progress) < 100) {
                         table.Rows.Clear();
-                    }
-                    while (Convert.ToInt32(progress) < 100)
-                    {
-                        // GRID LAYOUT FOR PLAYER
-                        var grid = new Grid();
-                        grid.AddColumn();
-                        grid.AddColumn();
 
                         // Build Now Playing text with indicators
                         string nowPlayingText = $"[bold green]{currentTrack.Title}[/]";
@@ -192,7 +185,7 @@ namespace Musicaly
                                 i == trackIndex ? $"[green]> {t.Title}[/]" : $"  {t.Title}"
                             ));
 
-                        var playlistPanel = new Panel(playlist)
+                        var playlistPanel = new Panel(playlistDisplay)
                         {
                             Header = new PanelHeader("Playlist"),
                             Border = BoxBorder.Rounded
