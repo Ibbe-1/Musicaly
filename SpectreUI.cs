@@ -94,7 +94,7 @@ namespace Musicaly
             //Håller koll om musiken är pausad
             bool isPaused = false;
 
-            viewMusic.ShowAllSongs(tracks.Select(t => t.Title).ToList()); // Show all songs, we need this here.
+            viewMusic.ShowAllSongs(playlist.tracks.Select(t => t.Title).ToList()); // Show all songs, we need this here.
             // this needs to be fixed currently it shows no songs
             // also implement a way to popout the viewer so that it doesn't interfere with the player UI
 
@@ -188,7 +188,7 @@ namespace Musicaly
 
                         // Playlist Panel
                         string playlist =
-                            string.Join("\n", tracks.Select((t, i) =>
+                            string.Join("\n", playlist.tracks.Select((t, i) =>
                                 i == trackIndex ? $"[green]> {t.Title}[/]" : $"  {t.Title}"
                             ));
 
