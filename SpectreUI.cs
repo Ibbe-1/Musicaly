@@ -187,7 +187,7 @@ namespace Musicaly
                         };
 
                         // Playlist Panel
-                        string playlist =
+                        string playlistDisplay =
                             string.Join("\n", playlist.tracks.Select((t, i) =>
                                 i == trackIndex ? $"[green]> {t.Title}[/]" : $"  {t.Title}"
                             ));
