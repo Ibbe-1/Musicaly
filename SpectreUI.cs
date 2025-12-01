@@ -161,7 +161,7 @@ namespace Musicaly
 
                         // Controls Panel
                         var controlsPanel = new Panel(
-                            "[white] [[P]] Prev | [[Space]] Pause | [[L]] Loop | [[J]] Jump | [[<-]] -5s | [[->]] +5s | [[S]] Skip | [[E]] Exit [/]"
+                            "[white] [[P]] Prev | [[Space]] Pause | [[L]] Loop | | [[D]] Del Music | [[A]] Add Music | [[J]] Jump | [[<-]] -5s | [[->]] +5s | [[S]] Skip | [[E]] Exit [/]"
                             )
                         {
                             Border = BoxBorder.None
@@ -245,23 +245,6 @@ namespace Musicaly
                                         Console.Clear();
                                         break;
                                     }
-
-
-                                case ConsoleKey.V: //show playlist (V)
-                                    {
-                                        waveOutEvent.Pause();
-                                        Console.Clear();
-                                        Console.WriteLine("Current Playlist:");
-                                        for (int i = 0; i < tracks.Count; i++)
-                                        {
-                                            Console.WriteLine($"{i + 1}. {tracks[i].Title}");
-                                        }
-                                        Console.WriteLine("\nPress any key to return to player...");
-                                        Console.ReadKey(true);
-                                        Console.Clear();
-                                        if (!isPaused) waveOutEvent.Play();
-                                    }
-                                    break;
 
 
                                 case ConsoleKey.A:  // ADD Music (A)
