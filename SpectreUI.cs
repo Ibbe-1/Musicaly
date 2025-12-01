@@ -318,7 +318,7 @@ namespace Musicaly
                                                 {
                                                     string filePath = allFiles[addIndex];
 
-                                                    tracks.Add(new Track()
+                                                    playlist.tracks.Add(new Track()
                                                     {
                                                         Title = Markup.Escape(Path.GetFileNameWithoutExtension(filePath)),
                                                         Path = filePath,
@@ -327,7 +327,7 @@ namespace Musicaly
 
                                                     Console.WriteLine("Song added to Playlist!");
                                                     //Uppdate nextTrack
-                                                    nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+                                                    nextTrack = playlist.tracks[(trackIndex + 1) % playlist.tracks.Count];
                                                 }
                                                 else
                                                 {
@@ -353,15 +353,15 @@ namespace Musicaly
                                         Console.Clear();
                                         Console.WriteLine("Remove song from playlist");
 
-                                        if (tracks.Count == 0)
+                                        if (playlist.tracks.Count == 0)
                                         {
                                             Console.WriteLine("No song in playlist.");
                                         }
                                         else
                                         {
-                                            for (int i = 0; i < tracks.Count; i++)
+                                            for (int i = 0; i < playlist.tracks.Count; i++)
                                             {
-                                                Console.WriteLine($"{i + 1}. {tracks[i].Title}");
+                                                Console.WriteLine($"{i + 1}. {playlist.tracks[i].Title}");
                                             }
 
                                             Console.WriteLine("\nEnter the number of the song you want to remove (or press Enter to cancel):");
@@ -370,7 +370,7 @@ namespace Musicaly
                                             if (!string.IsNullOrWhiteSpace(removeInput) && int.TryParse(removeInput, out int removeIndex))
                                             {
                                                 removeIndex -= 1;
-                                                if (removeIndex >= 0 && removeIndex < tracks.Count)
+                                                if (removeIndex >= 0 && removeIndex < playlist.tracks.Count)
                                                 {
                                                     //Tillåt inte att ta bort låten som spelas 
                                                     if (removeIndex == trackIndex)
@@ -379,14 +379,14 @@ namespace Musicaly
                                                     }
                                                     else
                                                     {
-                                                        tracks.RemoveAt(removeIndex);
+                                                        playlist.tracks.RemoveAt(removeIndex);
                                                         Console.WriteLine("Song removed from playlist!");
 
-                                                        if (trackIndex >= tracks.Count)
+                                                        if (trackIndex >= playlist.tracks.Count)
                                                             trackIndex = 0;
 
-                                                        currentTrack = tracks[trackIndex];
-                                                        nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+                                                        currentTrack = playlist.tracks[trackIndex];
+                                                        nextTrack = playlist.tracks[(trackIndex + 1) % playlist.tracks.Count];
 
                                                     }
 
