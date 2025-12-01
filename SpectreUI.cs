@@ -9,18 +9,67 @@ using System.Data;
 
 namespace Musicaly
 {
-    internal class SpectreUI
+    internal static class SpectreUI
     {
-      
-        // Property to track if exit is requested
-        public bool ExitRequested { get; private set; } = false;
-        public void ShowWelcomeMessage()
-        {
+        public static string ShowWelcomeMessage() {
             AnsiConsole.MarkupLine("[bold green]Welcome to Musicaly![/]");
+            return AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .PageSize(3)
+                    .AddChoices(["Log In", "Register", "Exit"]));
         }
 
-        public async Task SpectreMusicUI()
-        {
+        public static string Username() {
+            return AnsiConsole.Prompt(
+                new TextPrompt<string>("Enter username:")
+                    .AllowEmpty());
+        }
+
+        public static string Password() {
+            return AnsiConsole.Prompt(
+                new TextPrompt<string>("Enter password:")
+                    .AllowEmpty()
+                    .Secret());
+        }
+
+        public static string UserMenu(User user) {
+            return user.playlists.Any() ? AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                .PageSize(5)
+                .AddChoices(["Choose playlist", "Create playlist", "Edit playlist", "Delete playlist", "Logout"])) : AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                .PageSize(3)
+                .AddChoices(["Create playlist", "Logout"]));
+        }
+
+        public async static Task UserMenuDropdown(User user) {
+            while (true) {
+                Console.Clear();
+                string choice;
+                switch (choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                .PageSize(user.playlists.Count() + 5)
+                .AddChoices("Choose playlist")
+                .AddChoiceGroup("Playlists", user.playlists.Select(p => p.Title))
+                .AddChoices(["Create playlist", "Delete playlist", "Logout"]))) {
+                    case "Choose playlist":
+                        return;
+                    case "Create playlist":
+                        user.CreatePlaylist();
+                        break;
+                    case "Delete playlist":
+                        user.DeletePlaylist();
+                        break;
+                    case "Logout":
+                        return;
+                    default:
+                        await SpectreMusicUI(user.playlists.Find(p => p.Title.Equals(choice)));
+                        return;
+                }
+            }
+        }
+
+        public static async Task SpectreMusicUI(Playlist playlist) {
             // We need to create instances of ViewMusic so that VivewMusic methods can be used.
             var viewMusic = new ViewMusic();
 
@@ -30,34 +79,24 @@ namespace Musicaly
             table.AddColumn("Next Up");
             table.AddColumn("Progress");
 
-            // Ask user to input songs
-            // Collect songs from user
-            // CHANGE THIS LATER WHEN PUTTING ACTUAL SONGS, WE WANT TO LOAD FROM A PLAYLIST.
-            List<Track> tracks = new List<Track>();
-            List<string> input = AnsiConsole.Prompt(
-                new MultiSelectionPrompt<string>()
-                .PageSize(10)
-                .UseConverter(item => Markup.Escape(Path.GetFileNameWithoutExtension(item)))
-                .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic))));
-            foreach (string s in input)
-            {
-                tracks.Add(new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(s)), Path = s, Duration = new AudioFileReader(s).TotalTime });
-            }
-
             // Ensure there are at least 2 songs
-            if (tracks.Count < 2)
-            {
+            if (playlist.tracks.Count < 2) {
                 Console.WriteLine("You need at least 2 songs to start the player.");
                 return;
             }
 
             // Initialize current, next, previous
             int trackIndex = 0;
-            Track currentTrack = tracks[trackIndex];
-            Track nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+            Track currentTrack = playlist.tracks[trackIndex];
+            Track nextTrack = playlist.tracks[(trackIndex + 1) % playlist.tracks.Count];
             string previousSong = "";
 
-            viewMusic.ShowAllSongs(tracks.Select(t => t.Title).ToList()); // Show all songs, we need this here.
+            // Property to track if exit is requested
+            bool ExitRequested = false;
+            //Håller koll om musiken är pausad
+            bool isPaused = false;
+
+            viewMusic.ShowAllSongs(playlist.tracks.Select(t => t.Title).ToList()); // Show all songs, we need this here.
             // this needs to be fixed currently it shows no songs
             // also implement a way to popout the viewer so that it doesn't interfere with the player UI
 
@@ -72,20 +111,17 @@ namespace Musicaly
 
             // bool to track loop request
             bool loopRequested = false;
-            bool isPaused = false;
+ 
             WaveOutEvent waveOutEvent = new WaveOutEvent();
 
             // Use a single Live display for the table wrapped in a Panel
-            await AnsiConsole.Live(new Panel(table)
-            {
+            await AnsiConsole.Live(new Panel(table) {
                 Header = new PanelHeader("[bold yellow]Musicaly Player[/]"),
                 Border = BoxBorder.Rounded,
                 BorderStyle = new Style(Color.Grey, decoration: Decoration.Bold)
-            }).StartAsync(async ctx =>
-            {
+            }).StartAsync(async ctx => {
                 // main loop runs until user requests exit
-                while (!ExitRequested)
-                {
+                while (!ExitRequested) {
                     // bools to track user requests
                     bool skipRequested = false;
                     bool playPreviousRequested = false;
@@ -94,12 +130,19 @@ namespace Musicaly
                     double progress = 0;
 
                     AudioFileReader audioFileReader = new AudioFileReader(currentTrack.Path);
-                    waveOutEvent.Init(audioFileReader);
+                    try {
+                        waveOutEvent.Init(audioFileReader);
+                    }
+                    catch (Exception ex) {
+                        Console.WriteLine(ex.Message + ". Press any key to continue.");
+                        Console.ReadKey();
+                        return;
+                    }
                     waveOutEvent.Play();
 
                     // Update the table until the song ends or user requests an action
-                    while (Convert.ToInt32(progress) < 100)
-                    {
+                    while (Convert.ToInt32(progress) < 100) {
+                        table.Rows.Clear();
                         // GRID LAYOUT FOR PLAYER
                         var grid = new Grid();
                         grid.AddColumn();
@@ -146,12 +189,12 @@ namespace Musicaly
                         };
 
                         // Playlist Panel
-                        string playlist =
-                            string.Join("\n", tracks.Select((t, i) =>
+                        string playlistDisplay =
+                            string.Join("\n", playlist.tracks.Select((t, i) =>
                                 i == trackIndex ? $"[green]> {t.Title}[/]" : $"  {t.Title}"
                             ));
 
-                        var playlistPanel = new Panel(playlist)
+                        var playlistPanel = new Panel(playlistDisplay)
                         {
                             Header = new PanelHeader("Playlist"),
                             Border = BoxBorder.Rounded
@@ -186,8 +229,7 @@ namespace Musicaly
                         progress = audioFileReader.CurrentTime / audioFileReader.TotalTime * 100;
 
                         // Check for user key presses without blocking
-                        if (Console.KeyAvailable)
-                        {
+                        if (Console.KeyAvailable) {
                             var key = Console.ReadKey(true).Key;
 
                             // Handle key presses
@@ -276,7 +318,7 @@ namespace Musicaly
                                                 {
                                                     string filePath = allFiles[addIndex];
 
-                                                    tracks.Add(new Track()
+                                                    playlist.tracks.Add(new Track()
                                                     {
                                                         Title = Markup.Escape(Path.GetFileNameWithoutExtension(filePath)),
                                                         Path = filePath,
@@ -285,7 +327,7 @@ namespace Musicaly
 
                                                     Console.WriteLine("Song added to Playlist!");
                                                     //Uppdate nextTrack
-                                                    nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+                                                    nextTrack = playlist.tracks[(trackIndex + 1) % playlist.tracks.Count];
                                                 }
                                                 else
                                                 {
@@ -311,15 +353,15 @@ namespace Musicaly
                                         Console.Clear();
                                         Console.WriteLine("Remove song from playlist");
 
-                                        if (tracks.Count == 0)
+                                        if (playlist.tracks.Count == 0)
                                         {
                                             Console.WriteLine("No song in playlist.");
                                         }
                                         else
                                         {
-                                            for (int i = 0; i < tracks.Count; i++)
+                                            for (int i = 0; i < playlist.tracks.Count; i++)
                                             {
-                                                Console.WriteLine($"{i + 1}. {tracks[i].Title}");
+                                                Console.WriteLine($"{i + 1}. {playlist.tracks[i].Title}");
                                             }
 
                                             Console.WriteLine("\nEnter the number of the song you want to remove (or press Enter to cancel):");
@@ -328,7 +370,7 @@ namespace Musicaly
                                             if (!string.IsNullOrWhiteSpace(removeInput) && int.TryParse(removeInput, out int removeIndex))
                                             {
                                                 removeIndex -= 1;
-                                                if (removeIndex >= 0 && removeIndex < tracks.Count)
+                                                if (removeIndex >= 0 && removeIndex < playlist.tracks.Count)
                                                 {
                                                     //Tillåt inte att ta bort låten som spelas 
                                                     if (removeIndex == trackIndex)
@@ -337,14 +379,14 @@ namespace Musicaly
                                                     }
                                                     else
                                                     {
-                                                        tracks.RemoveAt(removeIndex);
+                                                        playlist.tracks.RemoveAt(removeIndex);
                                                         Console.WriteLine("Song removed from playlist!");
 
-                                                        if (trackIndex >= tracks.Count)
+                                                        if (trackIndex >= playlist.tracks.Count)
                                                             trackIndex = 0;
 
-                                                        currentTrack = tracks[trackIndex];
-                                                        nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+                                                        currentTrack = playlist.tracks[trackIndex];
+                                                        nextTrack = playlist.tracks[(trackIndex + 1) % playlist.tracks.Count];
 
                                                     }
 
@@ -371,30 +413,31 @@ namespace Musicaly
                             }
                         }
 
+                        if (ExitRequested) {
+                            waveOutEvent.Stop();
+                            return;
+                        }
                         if (skipRequested || playPreviousRequested)
                             break; // immediately stop current song
                         if (isPaused) waveOutEvent.Pause();
                         else waveOutEvent.Play();
                     }
 
-                    if (ExitRequested) break;
-
                     // Handle user requests after stopping or finishing the song
-                    if (playPreviousRequested)
-                    {
+                    if (playPreviousRequested) {
                         // Move to previous song in the playlist
                         trackIndex--;
                         if (trackIndex < 0)
-                            trackIndex = tracks.Count - 1;
+                            trackIndex = playlist.tracks.Count - 1;
 
-                        currentTrack = tracks[trackIndex];
-                        nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+                        currentTrack = playlist.tracks[trackIndex];
+                        nextTrack = playlist.tracks[(trackIndex + 1) % playlist.tracks.Count];
                     }
                     else if (skipRequested || !loopRequested) // move to next song if skipped or finished naturally
                     {
-                        trackIndex = (trackIndex + 1) % tracks.Count;
-                        currentTrack = tracks[trackIndex];
-                        nextTrack = tracks[(trackIndex + 1) % tracks.Count];
+                        trackIndex = (trackIndex + 1) % playlist.tracks.Count;
+                        currentTrack = playlist.tracks[trackIndex];
+                        nextTrack = playlist.tracks[(trackIndex + 1) % playlist.tracks.Count];
                     }
 
                     waveOutEvent.Stop();
