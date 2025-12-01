@@ -57,9 +57,6 @@ namespace Musicaly
             Track nextTrack = tracks[(trackIndex + 1) % tracks.Count];
             string previousSong = "";
 
-            //Håller koll om musiken är pausad
-            bool isPaused = false;
-
             viewMusic.ShowAllSongs(tracks.Select(t => t.Title).ToList()); // Show all songs, we need this here.
             // this needs to be fixed currently it shows no songs
             // also implement a way to popout the viewer so that it doesn't interfere with the player UI
