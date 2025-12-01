@@ -5,6 +5,7 @@ using Spectre.Console;
 using NAudio.Wave;
 using System.IO;
 using System.ComponentModel.Design;
+using System.Data;
 
 namespace Musicaly
 {
@@ -20,6 +21,9 @@ namespace Musicaly
 
         public async Task SpectreMusicUI()
         {
+            // We need to create instances of ViewMusic so that VivewMusic methods can be used.
+            var viewMusic = new ViewMusic();
+
             // Table to display current song, next up, and progress
             var table = new Table().Centered();
             table.AddColumn("Current Song");
@@ -35,7 +39,8 @@ namespace Musicaly
                 .PageSize(10)
                 .UseConverter(item => Markup.Escape(Path.GetFileNameWithoutExtension(item)))
                 .AddChoices(Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic))));
-            foreach (string s in input) {
+            foreach (string s in input)
+            {
                 tracks.Add(new Track() { Title = Markup.Escape(Path.GetFileNameWithoutExtension(s)), Path = s, Duration = new AudioFileReader(s).TotalTime });
             }
 
@@ -52,8 +57,12 @@ namespace Musicaly
             Track nextTrack = tracks[(trackIndex + 1) % tracks.Count];
             string previousSong = "";
 
-            // Clear console for UI
-            Console.Clear();
+            //Håller koll om musiken är pausad
+            bool isPaused = false;
+
+            viewMusic.ShowAllSongs(tracks.Select(t => t.Title).ToList()); // Show all songs, we need this here.
+            // this needs to be fixed currently it shows no songs
+            // also implement a way to popout the viewer so that it doesn't interfere with the player UI
 
             // Display controls
             Console.WriteLine();
@@ -61,6 +70,7 @@ namespace Musicaly
             Console.WriteLine("<- [P] Play Previous || [L] Loop ||  [S] Skip  -> || [E] Exit");
             Console.WriteLine("[Space] Pause/Resume || [V] View Playlist || [A] Add Song || [D] Delete Song");
             Console.WriteLine();
+            Console.Clear();
 
 
             // bool to track loop request
@@ -93,40 +103,89 @@ namespace Musicaly
                     // Update the table until the song ends or user requests an action
                     while (Convert.ToInt32(progress) < 100)
                     {
-                        table.Rows.Clear();
+                        // GRID LAYOUT FOR PLAYER
+                        var grid = new Grid();
+                        grid.AddColumn();
+                        grid.AddColumn();
 
-                        // Create a simple progress bar for the current song
-                        int barLength = 20; // length of the bar
-                        int filledLength = Convert.ToInt32(progress * barLength / 100);
-                        string bar = new string('■', filledLength) + new string('─', barLength - filledLength);
+                        // Build Now Playing text with indicators
+                        string nowPlayingText = $"[bold green]{currentTrack.Title}[/]";
 
-                        // Highlight the current song, add loop indicator if active
-                        string currentDisplay = loopRequested
-                            ? $"[bold green] {currentTrack.Title} [[Looping]][/]" // indicate that the song is being looped.
-                            : $"[bold green] {currentTrack.Title}[/]";
+                        if (loopRequested)
+                            nowPlayingText += " [yellow][[Looping]][/]";
 
+                        if (isPaused)
+                            nowPlayingText += " [blue][[Paused]][/]";
+
+                        // Now Playing Panel
+                        var nowPlayingPanel = new Panel(nowPlayingText)
+                        {
+                            Header = new PanelHeader("Now Playing"),
+                            Border = BoxBorder.Rounded
+                        };
+
+                        // Next Up Panel
+                        var nextUpPanel = new Panel($"[yellow]{nextTrack.Title}[/]")
+                        {
+                            Header = new PanelHeader("Next Up"),
+                            Border = BoxBorder.Rounded
+                        };
+
+                        grid.AddRow(nowPlayingPanel, nextUpPanel);
+
+                        // Progress Bar
+                        int barLength = 30;
+                        int filled = Convert.ToInt32(progress * barLength / 100);
+                        string bar = new string('■', filled) + new string('─', barLength - filled);
                         bool ltHr = audioFileReader.TotalTime.TotalHours < 1;
-                        // Highlight the current song and show progress visually
-                        table.AddRow(
-                            currentDisplay,                      // current song highlighted, with loop indicator
-                            $"[dim]{nextTrack.Title}[/]",               // next song dimmed
-                            $"[cyan]{bar} {(ltHr ? audioFileReader.CurrentTime.ToString(@"mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"mm\:ss") : audioFileReader.CurrentTime.ToString(@"hh\:mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"hh\:mm\:ss"))}[/]"        // progress bar with percentage
-                        );
+                        string timeString = ltHr
+                            ? $"{audioFileReader.CurrentTime:mm\\:ss}/{audioFileReader.TotalTime:mm\\:ss}"
+                            : $"{audioFileReader.CurrentTime:hh\\:mm\\:ss}/{audioFileReader.TotalTime:hh\\:mm\\:ss}";
 
-                        // Add controls row inside the table for style
-                        table.AddEmptyRow();
-                        table.AddRow(
-                            "[bold white]<- [[P]] Play Previous || [[L]] Loop || [[S]] Skip -> || [[E]] Exit[/]",
-                            "",
-                            ""
-                        );
+                        var progressPanel = new Panel($"[cyan]{bar}[/] {timeString}")
+                        {
+                            Header = new PanelHeader("Progress"),
+                            Border = BoxBorder.Rounded
+                        };
 
-                        ctx.Refresh();
+                        // Playlist Panel
+                        string playlist =
+                            string.Join("\n", tracks.Select((t, i) =>
+                                i == trackIndex ? $"[green]> {t.Title}[/]" : $"  {t.Title}"
+                            ));
+
+                        var playlistPanel = new Panel(playlist)
+                        {
+                            Header = new PanelHeader("Playlist"),
+                            Border = BoxBorder.Rounded
+                        };
+
+                        grid.AddRow(progressPanel, playlistPanel);
+
+                        // Controls Panel
+                        var controlsPanel = new Panel(
+                            "[white] [[P]] Prev | [[Space]] Pause | [[L]] Loop | [[J]] Jump | [[<-]] -5s | [[->]] +5s | [[S]] Skip | [[E]] Exit [/]"
+                            )
+                        {
+                            Border = BoxBorder.None
+                        };
+
+                        grid.AddRow(controlsPanel);
+
+                        // Combine everything into the main player panel with decorative title
+                        var playerPanel = new Panel(grid)
+                        {
+                            Header = new PanelHeader("[bold yellow] MUSICALY [/]"), // Decorative top title
+                            Border = BoxBorder.Double,
+                            Padding = new Padding(1, 1, 1, 1)
+                        };
+
+                        // Update live display
+                        ctx.UpdateTarget(playerPanel);
 
                         // Simulate time passing for song progress
                         await Task.Delay(300);
 
-                        // For demonstration, increment by 5%
                         progress = audioFileReader.CurrentTime / audioFileReader.TotalTime * 100;
 
                         // Check for user key presses without blocking
@@ -135,176 +194,67 @@ namespace Musicaly
                             var key = Console.ReadKey(true).Key;
 
                             // Handle key presses
-                            // L - Loop, S - Skip, P - Previous, E - Exit
                             switch (key)
                             {
-                                case ConsoleKey.L: 
-                                    loopRequested = !loopRequested; // toggle loop
-                                    break;
+                                case ConsoleKey.Spacebar:
+                                    isPaused = !isPaused;
+                                    break; // toggle pause/resume
+
+                                case ConsoleKey.L:
+                                    loopRequested = !loopRequested;
+                                    break; // toggle loop
+
                                 case ConsoleKey.S:
                                     skipRequested = true;
                                     break;
+
                                 case ConsoleKey.P:
-                                    playPreviousRequested = true; 
+                                    playPreviousRequested = true;
                                     break;
+
                                 case ConsoleKey.E:
-                                    ExitRequested = true; //exit player 
-                                    return;
-                                //paus with spacebar
-                                case ConsoleKey.Spacebar:
-                                    if (isPaused)
-                                    {
-                                        waveOutEvent.Play();   //continue playing
-                                        isPaused = false;
-                                    }
-                                    else
-                                    {
-                                        waveOutEvent.Pause();  //pause playing
-                                        isPaused = true;
-                                    }
-                                    break;  //Spacebar stops here
+                                    ExitRequested = true;
+                                    return; // exit player
 
-                                case ConsoleKey.V: //show playlist (V)
-                                { 
-                                    waveOutEvent.Pause();
-                                    Console.Clear();
-                                    Console.WriteLine("Current Playlist:");
-                                    for (int i = 0; i < tracks.Count; i++)
-                                    {
-                                        Console.WriteLine($"{i + 1}. {tracks[i].Title}");
-                                    }
-                                    Console.WriteLine("\nPress any key to return to player...");
-                                    Console.ReadKey(true);
-                                    Console.Clear();
-                                    if (!isPaused) waveOutEvent.Play();
-                                    }
+                                // Seek backward 5 seconds
+                                case ConsoleKey.LeftArrow:
+                                    audioFileReader.CurrentTime -= TimeSpan.FromSeconds(5);
+                                    if (audioFileReader.CurrentTime < TimeSpan.Zero)
+                                        audioFileReader.CurrentTime = TimeSpan.Zero;
                                     break;
 
+                                // Seek forward 5 seconds
+                                case ConsoleKey.RightArrow:
+                                    audioFileReader.CurrentTime += TimeSpan.FromSeconds(5);
+                                    if (audioFileReader.CurrentTime > audioFileReader.TotalTime)
+                                        audioFileReader.CurrentTime = audioFileReader.TotalTime;
+                                    break;
 
-                                case ConsoleKey.A:  // ADD Music (A)
+                                // Jump to specific time
+                                case ConsoleKey.J:
                                     {
-                                        waveOutEvent.Pause();
-                                        Console.Clear();
-                                        Console.WriteLine("Add more songs to the folder:");
+                                        Console.CursorVisible = true;
+                                        Console.Write("\nJump to (mm:ss): ");
+                                        string jumpInput = Console.ReadLine();
+                                        Console.CursorVisible = false;
 
-                                        string musicFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
-                                        string[] allFiles = Directory.GetFiles(musicFolder);
-
-                                        if (allFiles.Length == 0)
+                                        if (TimeSpan.TryParseExact(jumpInput, @"m\:ss", null, out TimeSpan jumpTo))
                                         {
-                                            Console.WriteLine("No music files found in the Music folder.");
-                                        }
-                                        else
-                                        {
-                                            Console.WriteLine("Avalailable files:");
-                                            for (int i = 0; i < allFiles.Length; i++)
-                                                Console.WriteLine($"{i + 1}. {Path.GetFileNameWithoutExtension(allFiles[i])}");
-
-                                            Console.WriteLine("\nEnter the number of the songs you want to add ( or press Enter to cancel:");
-                                            string addInput = Console.ReadLine();
-
-                                            if (!string.IsNullOrWhiteSpace(addInput) && int.TryParse(addInput, out int addIndex))
+                                            if (jumpTo < audioFileReader.TotalTime)
                                             {
-                                                addIndex -= 1;
-                                                if (addIndex >= 0 && addIndex < allFiles.Length)
-                                                {
-                                                    string filePath = allFiles[addIndex];
-
-                                                    tracks.Add(new Track()
-                                                    {
-                                                        Title = Markup.Escape(Path.GetFileNameWithoutExtension(filePath)),
-                                                        Path = filePath,
-                                                        Duration = new AudioFileReader(filePath).TotalTime,
-                                                    });
-
-                                                    Console.WriteLine("Song added to Playlist!");
-                                                    //Uppdate nextTrack
-                                                    nextTrack = tracks[(trackIndex + 1) % tracks.Count];
-                                                }
-                                                else
-                                                {
-                                                    Console.WriteLine("Invalid number.");
-                                                }
-                                            }
-                                            else
-                                            {
-                                                Console.WriteLine("Canceled.");
+                                                audioFileReader.CurrentTime = jumpTo;
                                             }
                                         }
-
-                                        Console.WriteLine("Press any key to return to plater.");
-                                        Console.ReadKey(true);
                                         Console.Clear();
-                                        if (!isPaused) waveOutEvent.Play();
                                         break;
                                     }
-
-                                case ConsoleKey.D: //Delete Song (D)
-                                {
-                                    waveOutEvent.Pause();
-                                    Console.Clear();
-                                    Console.WriteLine("Remove song from playlist");
-
-                                    if (tracks.Count == 0)
-                                    {
-                                        Console.WriteLine("No song in playlist.");
-                                    }
-                                    else
-                                    {
-                                       for (int i = 0; i < tracks.Count; i++)
-                                       {
-                                          Console.WriteLine($"{i + 1}. {tracks[i].Title}");
-                                       }
-
-                                       Console.WriteLine("\nEnter the number of the song you want to remove (or press Enter to cancel):");
-                                       string removeInput = Console.ReadLine();
-
-                                       if (!string.IsNullOrWhiteSpace(removeInput) && int.TryParse(removeInput, out int removeIndex))
-                                       {
-                                          removeIndex -= 1;
-                                          if (removeIndex >= 0 && removeIndex < tracks.Count)
-                                          {
-                                              //Tillåt inte att ta bort låten som spelas 
-                                              if (removeIndex == trackIndex)
-                                              {
-                                                 Console.WriteLine("You can not remove the song that is currently playing");
-                                              }
-                                              else
-                                              {
-                                                  tracks.RemoveAt(removeIndex);
-                                                  Console.WriteLine("Song removed from playlist!");
-
-                                                  if (trackIndex >= tracks.Count)
-                                                  trackIndex = 0;
-
-                                                  currentTrack = tracks[trackIndex];
-                                                  nextTrack = tracks[(trackIndex + 1) % tracks.Count];
-
-                                              }
-
-                                          }
-                                          else
-                                          {
-                                               Console.WriteLine("Invalid number.");
-                                          }
-                                       }
-                                       else
-                                       {
-                                           Console.WriteLine("Canceled.");
-                                       }
-                                    }
-
-                                    Console.WriteLine("Press any key to return to player.");
-                                    Console.ReadKey(true);
-                                    Console.Clear();
-                                    if (!isPaused) waveOutEvent.Play();
-                                    break;
-                                }
                             }
                         }
 
                         if (skipRequested || playPreviousRequested)
-                          break; // immediately stop current song
+                            break; // immediately stop current song
+                        if (isPaused) waveOutEvent.Pause();
+                        else waveOutEvent.Play();
                     }
 
                     if (ExitRequested) break;
@@ -330,6 +280,9 @@ namespace Musicaly
                     waveOutEvent.Stop();
 
                     // loopRequested keeps currentSong the same
+
+                    //Reset pause when switching to a new songs
+                    isPaused = false;
                 }
             });
         }
