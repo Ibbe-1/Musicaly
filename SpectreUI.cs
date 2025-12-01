@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Spectre.Console;
 using NAudio.Wave;
+using System.Data;
 
 namespace Musicaly
 {
@@ -93,6 +94,15 @@ namespace Musicaly
             //Håller koll om musiken är pausad
             bool isPaused = false;
 
+            viewMusic.ShowAllSongs(tracks.Select(t => t.Title).ToList()); // Show all songs, we need this here.
+            // this needs to be fixed currently it shows no songs
+            // also implement a way to popout the viewer so that it doesn't interfere with the player UI
+
+            // Display controls
+            Console.WriteLine();
+            Console.WriteLine("Controls:");
+            Console.WriteLine("<- [P] Play Previous || [L] Loop ||  [S] Skip  -> || [E] Exit");
+            Console.WriteLine();
             Console.Clear();
 
             // bool to track loop request
@@ -128,43 +138,91 @@ namespace Musicaly
                     // Update the table until the song ends or user requests an action
                     while (Convert.ToInt32(progress) < 100) {
                         table.Rows.Clear();
+                    while (Convert.ToInt32(progress) < 100)
+                    {
+                        // GRID LAYOUT FOR PLAYER
+                        var grid = new Grid();
+                        grid.AddColumn();
+                        grid.AddColumn();
 
-                        // Create a simple progress bar for the current song
-                        int barLength = 20; // length of the bar
-                        int filledLength = Convert.ToInt32(progress * barLength / 100);
-                        string bar = new string('■', filledLength) + new string('─', barLength - filledLength);
+                        // Build Now Playing text with indicators
+                        string nowPlayingText = $"[bold green]{currentTrack.Title}[/]";
 
-                        // Highlight the current song, add loop indicator if active
-                        string currentDisplay = loopRequested
-                            ? $"[bold green] {currentTrack.Title} [[Looping]][/]" // indicate that the song is being looped.
-                            : $"[bold green] {currentTrack.Title}[/]";
+                        if (loopRequested)
+                            nowPlayingText += " [yellow][[Looping]][/]";
 
-                        //Show clear paused tag in blue 
                         if (isPaused)
-                            currentDisplay += " [blue][[Paused]][/]";
+                            nowPlayingText += " [blue][[Paused]][/]";
 
+                        // Now Playing Panel
+                        var nowPlayingPanel = new Panel(nowPlayingText)
+                        {
+                            Header = new PanelHeader("Now Playing"),
+                            Border = BoxBorder.Rounded
+                        };
+
+                        // Next Up Panel
+                        var nextUpPanel = new Panel($"[yellow]{nextTrack.Title}[/]")
+                        {
+                            Header = new PanelHeader("Next Up"),
+                            Border = BoxBorder.Rounded
+                        };
+
+                        grid.AddRow(nowPlayingPanel, nextUpPanel);
+
+                        // Progress Bar
+                        int barLength = 30;
+                        int filled = Convert.ToInt32(progress * barLength / 100);
+                        string bar = new string('■', filled) + new string('─', barLength - filled);
                         bool ltHr = audioFileReader.TotalTime.TotalHours < 1;
-                        // Highlight the current song and show progress visually
-                        table.AddRow(
-                            currentDisplay,                      // current song highlighted, with loop indicator
-                            $"[dim]{nextTrack.Title}[/]",               // next song dimmed
-                            $"[cyan]{bar} {(ltHr ? audioFileReader.CurrentTime.ToString(@"mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"mm\:ss") : audioFileReader.CurrentTime.ToString(@"hh\:mm\:ss") + "/" + audioFileReader.TotalTime.ToString(@"hh\:mm\:ss"))}[/]"        // progress bar with percentage
-                        );
+                        string timeString = ltHr
+                            ? $"{audioFileReader.CurrentTime:mm\\:ss}/{audioFileReader.TotalTime:mm\\:ss}"
+                            : $"{audioFileReader.CurrentTime:hh\\:mm\\:ss}/{audioFileReader.TotalTime:hh\\:mm\\:ss}";
 
-                        // Add controls row inside the table for style
-                        table.AddEmptyRow();
-                        table.AddRow(
-                            "[bold white]<- [[P]] Play Previous || [[Space]] Pause || [[L]] Loop || [[S]] Skip -> || [[E]] Exit[/]",
-                            "",
-                            ""
-                        );
+                        var progressPanel = new Panel($"[cyan]{bar}[/] {timeString}")
+                        {
+                            Header = new PanelHeader("Progress"),
+                            Border = BoxBorder.Rounded
+                        };
 
-                        ctx.Refresh();
+                        // Playlist Panel
+                        string playlist =
+                            string.Join("\n", tracks.Select((t, i) =>
+                                i == trackIndex ? $"[green]> {t.Title}[/]" : $"  {t.Title}"
+                            ));
+
+                        var playlistPanel = new Panel(playlist)
+                        {
+                            Header = new PanelHeader("Playlist"),
+                            Border = BoxBorder.Rounded
+                        };
+
+                        grid.AddRow(progressPanel, playlistPanel);
+
+                        // Controls Panel
+                        var controlsPanel = new Panel(
+                            "[white] [[P]] Prev | [[Space]] Pause | [[L]] Loop | [[J]] Jump | [[<-]] -5s | [[->]] +5s | [[S]] Skip | [[E]] Exit [/]"
+                            )
+                        {
+                            Border = BoxBorder.None
+                        };
+
+                        grid.AddRow(controlsPanel);
+
+                        // Combine everything into the main player panel with decorative title
+                        var playerPanel = new Panel(grid)
+                        {
+                            Header = new PanelHeader("[bold yellow] MUSICALY [/]"), // Decorative top title
+                            Border = BoxBorder.Double,
+                            Padding = new Padding(1, 1, 1, 1)
+                        };
+
+                        // Update live display
+                        ctx.UpdateTarget(playerPanel);
 
                         // Simulate time passing for song progress
                         await Task.Delay(300);
 
-                        // For demonstration, increment by 5%
                         progress = audioFileReader.CurrentTime / audioFileReader.TotalTime * 100;
 
                         // Check for user key presses without blocking
@@ -172,13 +230,60 @@ namespace Musicaly
                             var key = Console.ReadKey(true).Key;
 
                             // Handle key presses
-                            // L - Loop, S - Skip, P - Previous, E - Exit
-                            switch (key) {
-                                case ConsoleKey.Spacebar: isPaused = !isPaused; break; // toggle pause/resume
-                                case ConsoleKey.L: loopRequested = !loopRequested; break; // toggle loop
-                                case ConsoleKey.S: skipRequested = true; break;
-                                case ConsoleKey.P: playPreviousRequested = true; break;
-                                case ConsoleKey.E: ExitRequested = true; break; // exit player
+                            switch (key)
+                            {
+                                case ConsoleKey.Spacebar:
+                                    isPaused = !isPaused;
+                                    break; // toggle pause/resume
+
+                                case ConsoleKey.L:
+                                    loopRequested = !loopRequested;
+                                    break; // toggle loop
+
+                                case ConsoleKey.S:
+                                    skipRequested = true;
+                                    break;
+
+                                case ConsoleKey.P:
+                                    playPreviousRequested = true;
+                                    break;
+
+                                case ConsoleKey.E:
+                                    ExitRequested = true;
+                                    return; // exit player
+
+                                // Seek backward 5 seconds
+                                case ConsoleKey.LeftArrow:
+                                    audioFileReader.CurrentTime -= TimeSpan.FromSeconds(5);
+                                    if (audioFileReader.CurrentTime < TimeSpan.Zero)
+                                        audioFileReader.CurrentTime = TimeSpan.Zero;
+                                    break;
+
+                                // Seek forward 5 seconds
+                                case ConsoleKey.RightArrow:
+                                    audioFileReader.CurrentTime += TimeSpan.FromSeconds(5);
+                                    if (audioFileReader.CurrentTime > audioFileReader.TotalTime)
+                                        audioFileReader.CurrentTime = audioFileReader.TotalTime;
+                                    break;
+
+                                // Jump to specific time
+                                case ConsoleKey.J:
+                                    {
+                                        Console.CursorVisible = true;
+                                        Console.Write("\nJump to (mm:ss): ");
+                                        string jumpInput = Console.ReadLine();
+                                        Console.CursorVisible = false;
+
+                                        if (TimeSpan.TryParseExact(jumpInput, @"m\:ss", null, out TimeSpan jumpTo))
+                                        {
+                                            if (jumpTo < audioFileReader.TotalTime)
+                                            {
+                                                audioFileReader.CurrentTime = jumpTo;
+                                            }
+                                        }
+                                        Console.Clear();
+                                        break;
+                                    }
                             }
                         }
 
